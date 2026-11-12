@@ -1,6 +1,6 @@
 # Open-source readiness audit
 
-Date: 2026-11-12
+Date: 2026-11-12 (finalized for v0.13.1)
 
 ## Decision
 
@@ -22,6 +22,7 @@ The code is suitable for a public portfolio and open-source release. The private
 | CI | GitHub Actions on macOS, plus tag/version consistency |
 | Changelog | Keep a Changelog format with release dates and `[Unreleased]` |
 | Security policy | private vulnerability reporting documented |
+| Automated public-surface gate | CI rejects token shapes, personal absolute paths, private IPv4s, and broken relative Markdown links |
 
 ## Known limitations
 
@@ -41,7 +42,7 @@ The public repository must never include:
 
 ## Release procedure
 
-1. Run release metadata, shell/Python syntax, packaged tests, and isolated preflight.
+1. Run release metadata, public-surface audit, shell/Python syntax, packaged tests, and isolated preflight.
 2. Create a clean-history public tree from the current release commit.
 3. Push `main` to the public repository.
 4. Confirm GitHub Actions succeeds.

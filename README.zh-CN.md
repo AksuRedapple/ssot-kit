@@ -13,7 +13,7 @@
 2. **会话找不到接续**——开了几十个会话后，"这个需求该新开还是接续、接续接哪个"，没有地方可查。
 3. **知识散落**——结论沉在一个个会话里，找不到、接不上。
 
-## 方案（四件）
+## 方案（六件）
 
 | 件 | 一句话 |
 |---|---|
@@ -50,27 +50,27 @@
 - `hooks/` —— SessionStart / UserPromptSubmit / Stop 草稿（可选安装）+ `hooks/pi/` Pi 全局扩展
 - `skills/` —— 技能（装到 agent 的 skills 目录）
 - `tools/install/` —— `setup.sh`（首装）· `update.sh`（升级应用）· `install-service.sh` · `install-steward.sh`（`scripts/` 下同名脚本为兼容包装）
-- `scripts/` —— `install-hooks.sh` · `install-pi-extension.sh` · `publish.sh` · `install-steward.sh` · `publish.sh`（上游发布）
+- `scripts/` —— `install-hooks.sh` · `install-pi-extension.sh` · `install-steward.sh` · 发布与公开面门禁
 - `docs/` —— [QUICKSTART](docs/QUICKSTART.md) / [ARCHITECTURE](docs/ARCHITECTURE.md) / [GLOSSARY](docs/GLOSSARY.md) / [UNINSTALL](docs/UNINSTALL.md) / [PROTOCOLS](docs/PROTOCOLS.md) / [METHOD](docs/METHOD.md) / [SSMAP](docs/SSMAP.md) / [SEMANTIC](docs/SEMANTIC.md) / [HOOKS](docs/HOOKS.md)
 
 ## 红线
 
-- 本仓库**永远不得出现**：个人材料、组织内部材料、真实会话内容、凭据——发布白名单制（`scripts/publish.sh`）
+- 本仓库**永远不得出现**：个人材料、组织内部材料、真实会话内容、凭据；CI 通过 `scripts/public-audit.sh` 与 GitHub secret scanning 双重设闸
 - 使用机只读：**只 pull，永不 push**；内容层永不离开各自主机
 - 下游痛点/提案经人工转交回上游：上游迭代 → CHANGELOG 记账 → 下游 pull 即得
 
 ## 状态
 
-- **版本**：v0.13.0（2026-11-12）——`git pull` + `tools/install/update.sh` 即可升级
+- **版本**：v0.13.1（2026-11-12）——`git pull` + `tools/install/update.sh` 即可升级
 - **CI**：GitHub Actions（macOS）跑 release metadata / shell+Python 语法 / 随包测试 / 隔离 preflight
 - **公开面**：License ✅ · 中英文文档 ✅ · 快速开始（10 分钟）✅ · 术语表/卸载指南 ✅ · 工具清单 ✅
 - **闭环**：工作机外部视角审计 X01–X10 全部处理（0.7.2 → 0.8.1，见 CHANGELOG）
-- **验证**：`kit_check` 21/21 子集一致 · `run_all` 16/16 绿 · 种子用户第二台机器 dogfooding 中
-- **待办**：首发演示/方法文 ⏳
+- **验证**：随包回归测试、隔离安装/升级/迁移 preflight、公开面隐私与断链审计均通过
+- **待办**：补充更多端到端示例并继续对齐英文长文档 ⏳
 
 ## 维护者
 
-系统件迭代后：`bash scripts/publish.sh`（白名单同步 → 禁词闸 → commit → push）；每条变更写 `CHANGELOG.md`。
+建议通过 fork + Pull Request 贡献；每条变更写 `CHANGELOG.md`，合并前由 CI 校验版本、测试、隔离升级与公开面边界。
 
 ## Releases and changelog
 

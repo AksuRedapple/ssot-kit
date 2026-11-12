@@ -49,7 +49,7 @@ The system separates four lifetimes that are often mixed together:
 
 - **Thin-shell compilation** — canonical sources compile into bounded agent entry files (`sp_compile.py`).
 - **Session conversion** — Claude Code, Codex-adjacent, OpenCode, DSH, Pi, and Qoder evidence adapters.
-- **Session lifecycle** — inventory, handoff, rebirth, registry, and clean retirement (`sp_handoff.py`, `sp_rebirth_check.py`).
+- **Session lifecycle** — inventory, handoff, resumable registry entries, gates, and clean retirement (`scan_sessions.py`, `sp_handoff.py`).
 - **Candidate governance** — extraction, de-duplication, conflict detection, review, and one-way promotion.
 - **Semantic recall** — local embeddings with incremental indexing and versioned, atomically activated indexes.
 - **Read-side automation** — session-start injection, recall hooks, draft capture, and a 6-hour steward.
@@ -87,6 +87,7 @@ The semantic layer is optional and requires a local embedding server. See [docs/
 CI runs on macOS and verifies:
 
 - semantic version / changelog / capability alignment;
+- public-surface privacy and Markdown-link audit;
 - shell and Python syntax;
 - packaged regression tests;
 - isolated install, upgrade, and migration preflight;
@@ -96,6 +97,7 @@ Run locally:
 
 ```bash
 bash scripts/release-check.sh
+bash scripts/public-audit.sh
 bash tools/tests/run_all.sh
 bash scripts/preflight.sh --quiet
 ```

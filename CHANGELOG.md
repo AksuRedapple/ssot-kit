@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.13.1] - 2026-11-12 — 公开面试官视角终审与自动化隐私闸
+
+- **fix(public-surface)**: 清理历史验收文档中的个人绝对路径与内部机器称谓；公开文档统一为“本地实例 + 可选分发”表述
+- **fix(docs)**: 移除不随包工具和不存在文件的错误引用；修正中英文 README、架构、升级与贡献文档之间的状态、路径和验证口径漂移
+- **fix(sp_bootstrap)**: capture 阶段仅在 `sp_sweep.py` 与 `sp_capture.py` 同时存在时启用，公开子集不再规划或执行缺失阶段；新增回归测试
+- **feat(ci)**: 新增 `scripts/public-audit.sh`，自动检查凭据形态、个人绝对路径、私有网段和 Markdown 断链，并接入 macOS CI
+- **chore(deps)**: 新增 Dependabot GitHub Actions 每周更新配置
+
 ## [0.13.0] - 2026-11-12 — 候选冲突检测从全库 O(n²) 改为倒排增量
 
 - **perf(sp_candidates)**: 冲突检测改用倒排 token 索引，只把本次新增候选与反极性近邻比较；旧候选仍参与匹配，冲突双向标记语义不变

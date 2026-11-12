@@ -15,7 +15,7 @@
 | 7 | SSOT_REPORT | `ssot_check --report ~/ssot/SSOT_REPORT.md` | 生成短线/登记/inbox/断言/索引/草稿/演练 8 行；kit 临时实例同命令通过 |
 | 8 | 索引落后检测 | 读取 BUILD.commit 与 `git rev-parse HEAD` | 当前一致；落后时报告 `落后 N commits`（实现存在，未制造落后） |
 | 9 | kit 端复现 | `/tmp/fh5` 首装 + `kb_index` + `ssot_check --report` + `sp_compile --mem` | `kb-index/BUILD.json` 16 块；报告生成；壳头 `commit -`（非 git 根，预期） |
-| 10 | 隐私闸（mini） | `sp_index --incremental` 扫当前 27 万块 | 通过（无完整密钥形态）；命中时拒绝索引并提示 `--allow-secret-files` |
+| 10 | 隐私闸（开发实例） | `sp_index --incremental` 扫当前 27 万块 | 通过（无完整密钥形态）；命中时拒绝索引并提示 `--allow-secret-files` |
 | 11 | 隐私闸（kit） | 临时根放一个含 `ghp_…` 的文件 | 完成行 `🔒 1 文件因密钥形态跳过`；该路径 chunks=0，正常文件照常索引 |
 
 ## 复现命令
@@ -36,7 +36,7 @@ HOME=$T python3 $T/ssot/tools/sp_compile.py --mem
 
 ## 边界
 
-- `SSOT_REPORT.md`、`S2-index/semantic/BUILD.json` 是生成物，已进 mini `.gitignore`；不入版本库。
+- `SSOT_REPORT.md`、`S2-index/semantic/BUILD.json` 是生成物，已进开发实例 `.gitignore`；不入版本库。
 - 断言 lint 只报号不自动重排；修复编号需另立专项（会牵动正文引用）。
 - `built_at_commit` 只说明索引对应的正本提交；索引落后时报告 `落后 N commits`，不自动重建。
-- 本轮未改 mini 现役 hooks；`SSOT_REPORT` 由 `steward.sh` 每 6h 生成，首次已手工跑通。
+- 本轮未改开发机现役 hooks；`SSOT_REPORT` 由 `steward.sh` 每 6h 生成，首次已手工跑通。

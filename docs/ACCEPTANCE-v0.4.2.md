@@ -1,6 +1,6 @@
 # ACCEPTANCE · v0.4.2 读侧自动化与门禁
 
-> 日期：2026-10-21 ｜ 环境：隔离 HOME `/tmp/fh3`（临时实例 + 临时 settings）｜ **未触碰 mini 现役 hooks 与 opencode 插件**
+> 日期：2026-10-21 ｜ 环境：隔离 HOME `/tmp/fh3`（临时实例 + 临时 settings）｜ **未触碰真实 hooks 与 opencode 插件**
 > 目的：证明 hooks / Stop 草稿 / 6h steward / 发布门禁在干净实例上可安装、可去抖、可卸载，且不污染检索索引。
 
 ## 验收矩阵
@@ -36,6 +36,6 @@ HOME=$T bash scripts/install-steward.sh --dry --root $T/ssot
 ## 未在本轮实测 / 边界
 
 - **未实际加载 launchd/systemd timer**：本机已有现役 `com.ssot.steward`，用同一 label 加载临时实例会覆盖真实值守；只做 dry + `plutil -lint`，实际安装留给目标机。
-- **未改 mini 现役 hooks**：`~/qoder_place/session-memory/hooks/*` 零改动；本批只把通用版放进 kit。
+- **未改开发机现役 hooks**：测试只在隔离 HOME 中运行；本批只把通用版放进 kit。
 - **opencode 插件未改**：插件当前仍内嵌回忆句式副本；`tools/recall-phrases.json` 已是单一真源，插件下一轮改为读同一 JSON（插件启动时加载，改后需重启）。opencode 的 AGENTS.md 规则入口坑已在断言 A385。
 - **8399 按需拉起**：hook 在模型存在且服务未起时会启动 `serve_embed.sh`；本轮隔离实例无模型，未实跑拉起路径（真实机器 8399 已在跑）。

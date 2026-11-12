@@ -15,7 +15,16 @@ import argparse, glob, json, os, subprocess, sys, time
 
 SSOT = os.path.expanduser('~/ssot')
 STATE = os.environ.get('ZB_BOOTSTRAP_STATE') or os.path.expanduser('~/.ssot/bootstrap-state.json')
-PHASES = ['discover', 'convert', 'index', 'capture', 'extract', 'triage']
+
+
+def _capture_available():
+    """The public kit omits content-capture extensions; enable them as a pair."""
+    return all(os.path.isfile(os.path.join(SSOT, 'tools', name))
+               for name in ('sp_sweep.py', 'sp_capture.py'))
+
+
+CAPTURE_AVAILABLE = _capture_available()
+PHASES = ['discover', 'convert', 'index'] + (['capture'] if CAPTURE_AVAILABLE else []) + ['extract', 'triage']
 
 
 def sh(cmd, dry=False, timeout=7200):
@@ -60,7 +69,8 @@ def plan():
     print('  discover          统计每源原始/S1/索引缺口               <10s')
     print(f'  convert           sp_convert --src <源>(仅缺的源)        {max(1, todo_convert // 5)} 分钟')
     print(f'  index             sp_index --incremental                 {"~6 分钟/千块" if todo_index else "无需重建"}')
-    print(f'  capture           sp_sweep（需 --allow-capture）           {max(1, sessions // 40)} 分钟')
+    if CAPTURE_AVAILABLE:
+        print(f'  capture           sp_sweep（需 --allow-capture）           {max(1, sessions // 40)} 分钟')
     print(f'  extract           sp_llm_extract（需 --allow-llm）          约 {sessions} 次调用/小时级')
     print('  triage            sp_triage extract → 审阅表             1 分钟')
     print('\n  提示: 先跑 --full-dump --dry-run 看命令;capture/extract 需显式开关。')
@@ -82,6 +92,8 @@ def run_phase(ph, dry=False, allow_capture=False, allow_llm=False, limit=0):
     if ph == 'index':
         return sh([sys.executable, 'tools/sp_index.py', '--incremental'], dry, timeout=14400)
     if ph == 'capture':
+        if not CAPTURE_AVAILABLE:
+            print('  ⏭  capture 不在当前发行子集中'); return 0
         if not allow_capture:
             print('  ⏭  capture 跳过（需 --allow-capture）'); return 0
         return sh([sys.executable, 'tools/sp_sweep.py', '--quota', '24'], dry)
@@ -185,7 +197,7 @@ def _session_ids(d):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_bootstrap.py --plan\n  sp_bootstrap.py --full-dump --dry-run\n  sp_bootstrap.py --full-dump --allow-capture --allow-llm --resume',
+    ap = argparse.ArgumentParser(epilog='示例:\n  sp_bootstrap.py --plan\n  sp_bootstrap.py --full-dump --dry-run\n  sp_bootstrap.py --full-dump --allow-llm --resume',
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--plan', action='store_true')
     ap.add_argument('--full-dump', action='store_true')

@@ -25,6 +25,8 @@ jobs:
           python-version: "3.12"
       - name: Release metadata
         run: bash scripts/release-check.sh
+      - name: Public surface audit
+        run: bash scripts/public-audit.sh
       - name: Shell syntax
         run: |
           set -euo pipefail

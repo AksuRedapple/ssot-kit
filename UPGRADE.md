@@ -1,6 +1,6 @@
-# UPGRADE · 升级指南（工作机侧 / 下游）
+# UPGRADE · 升级指南
 
-> 上游（macmini）持续迭代系统件；本机**只 pull**，一条命令升级。
+> 从框架仓拉取已发布版本，再用一条命令更新本地实例；内容层保持不变。
 
 ## 升级（一条命令）
 
@@ -27,15 +27,15 @@ cd "$KIT" && git pull && bash scripts/update.sh
 4. **可选自动化**：`update.sh` 同步 `tools/hooks/`、`tools/steward.sh`、`tools/session-gate.sh`，但**不会**自动改 settings 或定时器；需要时显式跑
    `bash scripts/install-hooks.sh` / `bash scripts/install-steward.sh`（先 `--dry`；卸载加 `--uninstall`）。详见 `docs/HOOKS.md`。
 
-## 发提案（痛点 → 上游）
+## 反馈问题与提案
 
-工作机使用中的痛点/改进想法：把下面三样**告诉用户带回去**，不要带任何业务内容或真实数据——
+提交 issue 或 PR 时请包含下面三样，且不要附带任何业务内容或真实数据——
 
 1. 痛点描述（我要做什么事、卡在哪里）
 2. 期望行为（希望系统怎么表现）
 3. 复现步骤（怎么触发）
 
-上游处理后写进 `CHANGELOG.md` 的「工作机提案」区；下次 `git pull` 即可拿到改进。
+维护者处理后会记录进 `CHANGELOG.md`；下次 `git pull` 即可拿到改进。
 
 ## 排错（实战教训）
 

@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# ssot-kit · 上游发布（只在 macmini/上游跑）：把 ~/ssot 的框架件同步进本仓库 → commit → push
+# ssot-kit · 维护者发布：把已配置的 SSOT_ROOT 框架件同步进本仓库 → commit → push
 # 白名单制：只发布清单内的框架件；内容层永不发布。
 # 用法: bash scripts/publish.sh [--dry] ["提交说明"]
 set -euo pipefail
 
 DRY=0
 if [ "${1:-}" = "--dry" ]; then DRY=1; shift; fi
-MSG="${1:-sync from macmini $(date +%F)}"
+MSG="${1:-sync framework $(date +%F)}"
 
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
 SSOT="${SSOT_ROOT:-$HOME/ssot}"
+
+if [ ! -f "$SSOT/tools/kit_check.py" ]; then
+  echo "❌ 此脚本是维护者工作流：请把 SSOT_ROOT 指向包含 kit_check.py 的私有实例" >&2
+  exit 2
+fi
 
 HARD_BAN='/Users/'
 EXTRA_BAN="${SSOT_KIT_EXTRA_BAN:-}"

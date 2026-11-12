@@ -1,21 +1,27 @@
 # Contributing
 
-This repository is the distributable reference implementation of SSOT. Changes are developed against the author's upstream `~/ssot` instance, then synchronized here through the whitelist in `tools/kit_manifest.json`.
+SSOT Kit is a local-first reference implementation. Contributions should be
+reproducible from a fresh clone and must not depend on the maintainer's local
+knowledge instance.
 
-## Change flow
+## Development
 
-1. Create a branch and make the upstream change first.
+Requirements: Python 3.10+, Git, Bash, and NumPy.
+
+1. Fork the repository and create a focused branch.
 2. Add or update a packaged test under `tools/tests/`.
-3. Add the change to `CHANGELOG.md` under `[Unreleased]`.
-4. Run:
+3. Record user-visible changes in `CHANGELOG.md` under `[Unreleased]`.
+4. Run the full local gate:
 
    ```bash
    bash scripts/release-check.sh
+   bash scripts/public-audit.sh
    bash tools/tests/run_all.sh
    bash scripts/preflight.sh --quiet
    ```
 
-5. Open a pull request using the repository template.
+5. Open a pull request using the repository template and include the observed
+   commands and results.
 
 ## Release flow
 
@@ -27,4 +33,13 @@ This repository is the distributable reference implementation of SSOT. Changes a
 
 ## Publication boundary
 
-Only files listed by the upstream `kit_manifest.json` are synchronized into `tools/`. Never publish `evidence/`, indexes, local knowledge content, credentials, personal paths, or machine-specific configuration.
+The repository contains framework code, templates, and documentation only.
+Never commit:
+
+- session transcripts, personal knowledge, or organization-internal material;
+- semantic indexes, embeddings, databases, or generated private artifacts;
+- credentials, private endpoints, personal absolute paths, or machine-specific
+  configuration.
+
+`scripts/public-audit.sh`, GitHub secret scanning, and push protection are the
+automated backstops. A green scan does not replace human review of the diff.

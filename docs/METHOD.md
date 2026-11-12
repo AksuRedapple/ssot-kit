@@ -46,5 +46,5 @@
 <系统件仓库>/          上游下发的系统件（位置见 ~/ssot/profile/.kit-path；git pull 升级，见 UPGRADE.md）
 ```
 
-> 机器角色：**macmini = 上游**（迭代系统件 → 发布）；**工作机 = 下游**（只 pull，不回推）。
+> 可选多机模式：维护者 fork 作为上游（迭代系统件 → 发布），其他机器作为下游按需 pull。
 > 内容层（lines/knowledge/inbox/sessions）**永不离开本机、永不入仓**。

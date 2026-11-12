@@ -1,6 +1,6 @@
-# kit 能力清单（v0.13.0 · 2026-11-12）
+# kit 能力清单（v0.13.1 · 2026-11-12）
 
-> 本仓库是**参考实现**：能力先在作者本机 `~/ssot` 实现，再同步到这里；核验 `python3 ~/ssot/tools/kit_check.py` 应输出 `✅ 子集成立`。
+> 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
 
 ## 核心四件
@@ -18,7 +18,6 @@
 |---|---|---|
 | `sp_convert.py` | 各 harness 原始会话 → S1 五件套（一次一个源） | `python3 tools/sp_convert.py --src dsh --incremental` |
 | `sp_opencode.py` | opencode sqlite → S1（v2 优先，legacy 补未迁移；只读、幂等） | `python3 tools/sp_opencode.py --limit 20` |
-| `sp_sweep.py` | 全历史捕获 sweep（水位 + 配额） | `python3 tools/sp_sweep.py --quota 24` |
 | `sp_candidates.py` | 候选账本：撞正本/去重/状态机；冲突检测走倒排 token 增量近邻（不做全库 O(n²)） | `python3 tools/sp_candidates.py --src all --session <sid8>` |
 | `sp_triage.py` | 候选 → 审阅表 → A/R → 收件箱 | `python3 tools/sp_triage.py extract` |
 | `sp_dispatch.py` | 开局上下文（预算分级） | `python3 tools/sp_dispatch.py --level pointer` |
@@ -48,6 +47,6 @@
 | `tools/install/update.sh` | 升级：pull → 迁移(有才跑) → 体检 |
 | `tools/install/install-service.sh` / `install-steward.sh` | 常驻服务 / 6h 值守 |
 
-## 不随 kit 走
+## 公开边界
 
-`sp_mail.py`（个人邮件）、`sp_winjob.py`（跨机作业）、`sp_skill*`（本机技能治理）、`evidence/`、`S2-index/`、`knowledge/` 内容。
+本仓库只发布框架、模板与文档。个人/组织材料、真实会话、`evidence/`、`S2-index/`、`knowledge/` 内容、凭据与机器特定配置均不进入公开仓。

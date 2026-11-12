@@ -13,7 +13,7 @@
 
 Corollary: to keep a custom framework file, change the upstream (open an issue), don't edit your local copy.
 
-## Components (v0.8)
+## Components (v0.13)
 
 | Component | Carrier | Purpose |
 |---|---|---|
@@ -38,5 +38,6 @@ Corollary: to keep a custom framework file, change the upstream (open an issue),
 - [x] Steward (launchd freshness/inventory) for downstream
 - [x] Hook installation (`scripts/install-hooks.sh`)
 - [x] 10-minute quick start (`docs/QUICKSTART.md`)
-- [ ] Demo material / method article
+- [x] Method article (`docs/METHOD.md`)
+- [ ] More end-to-end examples
 - [ ] English docs fully aligned with Chinese
