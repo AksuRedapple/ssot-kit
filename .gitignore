@@ -1,0 +1,8 @@
+# 模型与索引产物不入库
+models/
+*.gguf
+**/.index/
+*.db
+__pycache__/
+.venv/
+.DS_Store
