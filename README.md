@@ -11,6 +11,8 @@ Everything runs on the user's machine; this repository contains framework code a
 
 [中文说明](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.en.md) · [Quick start](docs/QUICKSTART.md) · [Changelog](CHANGELOG.md)
 
+**Field notes:** [可换届的组织 — the Agent organization & state-governance series](https://ouya15.cn/insights/series/org-governance.html)
+
 ## The problem
 
 Long-running coding agents fail in three quiet ways:
@@ -109,6 +111,7 @@ Public issues and pull requests are welcome; security reports should follow [SEC
 
 ## Documentation
 
+- [Case study: Agent organization and state governance](docs/CASE-STUDY.md)
 - [Architecture](docs/ARCHITECTURE.en.md)
 - [Protocols](docs/PROTOCOLS.md)
 - [Quick start](docs/QUICKSTART.md)

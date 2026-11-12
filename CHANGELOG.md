@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.13.2] - 2026-11-13 — 公开案例与组织治理连载
+
+- **docs**: 新增 `docs/CASE-STUDY.md`，把问题、设计原则、实现、连载证据、边界与验证收束为一个公开作品集入口
+- **docs**: README 中英文入口链接到《可换届的组织》系列；GitHub repository homepage 指向该系列
+- **docs**: 记录 735–740 从会话寿命、角色任期、状态户口、任务级等待到子代理生命期和可逆控制的连续演进
+
 ## [0.13.1] - 2026-11-12 — 公开面试官视角终审与自动化隐私闸
 
 - **fix(public-surface)**: 清理历史验收文档中的个人绝对路径与内部机器称谓；公开文档统一为“本地实例 + 可选分发”表述

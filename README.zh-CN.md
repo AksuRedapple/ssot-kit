@@ -5,6 +5,8 @@
 > 给同时跑多个 agent、几十个会话的人：让知识不再散落、会话可以接续、常驻记忆不撑爆上下文。
 > **单机即完整系统**（clone 后你即 owner）；多机分发（上游维护 → 下游只 pull）是可选模式。**零内容入仓。**
 
+**实践连载**：[可换届的组织](https://ouya15.cn/insights/series/org-governance.html) · [案例说明](docs/CASE-STUDY.md)
+
 ## 它解决什么
 
 三个真实问题（都是会出事故的那种）：
@@ -52,6 +54,7 @@
 - `tools/install/` —— `setup.sh`（首装）· `update.sh`（升级应用）· `install-service.sh` · `install-steward.sh`（`scripts/` 下同名脚本为兼容包装）
 - `scripts/` —— `install-hooks.sh` · `install-pi-extension.sh` · `install-steward.sh` · 发布与公开面门禁
 - `docs/` —— [QUICKSTART](docs/QUICKSTART.md) / [ARCHITECTURE](docs/ARCHITECTURE.md) / [GLOSSARY](docs/GLOSSARY.md) / [UNINSTALL](docs/UNINSTALL.md) / [PROTOCOLS](docs/PROTOCOLS.md) / [METHOD](docs/METHOD.md) / [SSMAP](docs/SSMAP.md) / [SEMANTIC](docs/SEMANTIC.md) / [HOOKS](docs/HOOKS.md)
+- `docs/CASE-STUDY.md` —— 从真实问题到公开实现与连载证据的作品集入口
 
 ## 红线
 
