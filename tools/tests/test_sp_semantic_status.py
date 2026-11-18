@@ -7,6 +7,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+import importlib.util
+if importlib.util.find_spec("numpy") is None:
+    print("skip: numpy not installed")
+    sys.exit(0)
 import sp_semantic  # noqa: E402
 
 
