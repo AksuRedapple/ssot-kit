@@ -98,3 +98,21 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `sp_embed_autotune.py --probe` → `--bench --quick --apply` → `EMBED_CONFIG_DRY=1 bash tools/serve_embed.sh` → `sp_index.py --status` |
 | 判据 | ① dry-run 的 `-c/-b/-ub/--parallel` 与 profile 一致 ② `sp_index --status` 显示 `batch=…(profile)` ③ `BUILD.json` 含 `config` ④ workers 默认 1（无 >5% 收益不采纳并发） |
 | 反例 | `install-service.sh` 用 `$ROOT/models/...` 覆盖 profile 的真实模型路径 → FAIL；把 48GB 机器的 `workers=8` 当默认 → FAIL |
+
+## 11 索引分类（v0.15 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 自动化/值守会话默认只归档不入索引；分类可预览、可覆盖、可重建 |
+| 步骤 | `sp_classify.py --init` → `--scan` → `--apply` → `sp_index.py --plan` |
+| 判据 | ① `--plan` 显示 include/skip 与理由 ② policy 跳过的源块不会在增量后复活 ③ `--all-classes` 可恢复 ④ coverage 单列 `跳过` 且不报缺口 |
+| 反例 | 无 policy 文件时默认开始跳过 → FAIL（必须 opt-in）；启发式直接 apply 且无预览 → FAIL |
+
+## 12 退出（v0.15 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 退出可验收、可审计、可回滚，且不会被下次转换复活 |
+| 步骤 | `sp_exit.py --make-manifest` → `--retire --apply` → `--verify` → `sp_golden.py --check` |
+| 判据 | ① verify 按 sid 报 blocks=0 且 retired=true ② 重复 retire 无新日志 ③ `sp_index --incremental` 不复活 ④ S0/S1 仍在 ⑤ `logs/index-ops.jsonl` 有记录 |
+| 反例 | 只看总块数变化就宣称退出成功 → FAIL；删掉 S1/S0 才能退出 → FAIL（退出只删索引） |

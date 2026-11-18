@@ -17,6 +17,9 @@ v4.1（2026-11-04）：摘要口径收窄——会话指纹 = jsonl md5 + meta �
 --no-wait     锁被占用时立即退出（退出码 3）
 --wait-timeout 等锁上限，默认 1800s
 --status      只读：active/库/版本/config（batch 来自 profile 或 SP_INDEX_BATCH）
+--plan        只读：按 profile/index-policy.json 列出 include/skip 与理由
+--apply-policy 删除 policy 跳过源的块+src_state（显式；也可由 --incremental 孤儿清扫完成）
+--all-classes 忽略 session_class 过滤；--class c1,c2 只索引指定类；--include-retired 包含已退休源
 配置: client.batch 优先级 SP_INDEX_BATCH > profile/embed-profile.json > 32；workers 默认 1（并发未启用）
 隐私闸：源文本命中完整密钥形态时拒绝索引（先脱敏）；仅确认为文档示例时才可加 --allow-secret-files。
 """
@@ -34,6 +37,9 @@ import subprocess
 import sys
 import time
 import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sp_policy  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
@@ -139,6 +145,14 @@ def prune_versions(keep=2):
 API = 'http://127.0.0.1:8399/v1/embeddings'
 DOC_PREFIX = 'title: none | text: '
 RUN_META = {}
+CLASS_BY_REL = {}
+REASON_BY_REL = {}
+SID_BY_REL = {}
+CLASS_BY_DIR = {}
+SID_BY_DIR = {}
+SKIPPED = []
+POLICY = {}
+RETIRED = set()
 
 
 def _profile_client():
@@ -269,11 +283,19 @@ def contract_schema():
         return None
 
 
-def write_build():
+def write_build(preserve_policy=False):
     """索引新鲜度戳：commit + 块数 + 生成时间 + 契约 schema（供 sp_semantic/ssot_check/SSOT_REPORT 读）。
 
     schema 必须由生成器自己盖（契约 v2 · m0002 的章会被下次重建抹掉，见 A530）。
+    preserve_policy：--pack-only/--fts-only 不重新计算 policy（否则会把 skipped 读数抹成 0）。
     """
+    old = {}
+    target = os.path.join(os.path.dirname(DB), 'BUILD.json')
+    if preserve_policy:
+        try:
+            old = json.load(open(target, encoding='utf-8'))
+        except Exception:
+            old = {}
     try:
         con = sqlite3.connect(DB, timeout=30)
         n = con.execute('select count(*) from chunks').fetchone()[0]
@@ -283,7 +305,21 @@ def write_build():
     data = {'built_at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
             'commit': git_commit(), 'chunks': n, 'root': SSOT,
             'config': {'batch': BATCH, 'batch_source': BATCH_SOURCE,
-                       'workers': WORKERS, 'workers_source': WORKERS_SOURCE}}
+                       'workers': WORKERS, 'workers_source': WORKERS_SOURCE},
+            'policy': {'enabled': bool(POLICY.get('enabled')),
+                       'include': POLICY.get('include') or [],
+                       'skip': POLICY.get('skip') or [],
+                       'skipped_sources': len(POLICY_SKIPPED),
+                       'skipped_blocks': sum(x['blocks'] for x in POLICY_SKIPPED),
+                       'retired_sources': len(RETIRED),
+                       'cli_skipped_sources': len(SKIPPED)}}
+    try:
+        data['db_bytes'] = os.path.getsize(DB)
+        data['pack_bytes'] = sum(os.path.getsize(os.path.join(os.path.dirname(DB), f))
+                                 for f in ('pack-vecs.f32', 'pack-ids.i64')
+                                 if os.path.exists(os.path.join(os.path.dirname(DB), f)))
+    except OSError:
+        pass
     schema = contract_schema()
     if schema:
         data['schema'] = schema
@@ -294,8 +330,12 @@ def write_build():
         # 小增量（<50 块）的“吞吐”由固定开销主导，记录反而误导；只记完整构建或成规模增量
         if sec > 0 and emb and (RUN_META.get('mode') == 'full' or emb >= 50):
             data['throughput_chunks_per_s'] = round(emb / sec, 1)
+    if preserve_policy and old:
+        for k in ('policy', 'run', 'throughput_chunks_per_s'):
+            if k in old:
+                data[k] = old[k]
     try:
-        with open(os.path.join(os.path.dirname(DB), 'BUILD.json'), 'w', encoding='utf-8') as f:
+        with open(target, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
             f.write('\n')
     except Exception:
@@ -397,7 +437,15 @@ def s1_groups():
                 # 指纹只含进块内容：jsonl + meta 的 title/start；schema 等不进（A531）
                 digest = (S1VER + ':' + md5_files(jl) + ':'
                           + hashlib.md5(meta_chunk_fields(mj)).hexdigest())
-                groups.append((os.path.relpath(jl, SSOT), digest, rows))
+                rel = os.path.relpath(jl, SSOT)
+                cls = sp_policy.class_of(meta)
+                sid = sp_policy.sid_of(meta, rel)
+                CLASS_BY_REL[rel] = cls
+                REASON_BY_REL[rel] = str(meta.get('class_reason') or '')
+                SID_BY_REL[rel] = sid
+                CLASS_BY_DIR[os.path.basename(d)] = cls
+                SID_BY_DIR[os.path.basename(d)] = sid
+                groups.append((rel, digest, rows))
     return groups
 
 
@@ -409,11 +457,18 @@ def sa_groups():
             if not os.path.isdir(d):
                 continue
             pdir = os.path.basename(d)
+            cls = CLASS_BY_DIR.get(pdir, 'human')
+            sid = SID_BY_DIR.get(pdir, pdir[:8])
+            def add(rel, digest, rows):
+                CLASS_BY_REL[rel] = cls
+                REASON_BY_REL[rel] = 'parent-session'
+                SID_BY_REL[rel] = sid
+                groups.append((rel, digest, rows))
             smd = os.path.join(d, 'subagents.md')
             if os.path.isfile(smd):
                 chunks = chunk_file(smd)
                 if chunks:
-                    groups.append((os.path.relpath(smd, SSOT), S1VER + ':' + md5_files(smd), chunks))
+                    add(os.path.relpath(smd, SSOT), S1VER + ':' + md5_files(smd), chunks)
             for jf in sorted(glob.glob(os.path.join(d, '*.jsonl'))):
                 stem = os.path.basename(jf)[:-6]
                 head_base = f'[子agent: {pdir[:64]} · {stem[:26]}]'
@@ -448,8 +503,60 @@ def sa_groups():
                         for k in range(0, len(txt), 1500):
                             rows.append((i, f'{head}\n{txt[k:k + 1500]}', role, ts))
                 if rows:
-                    groups.append((os.path.relpath(jf, SSOT), S1VER + ':' + md5_files(jf), rows))
+                    add(os.path.relpath(jf, SSOT), S1VER + ':' + md5_files(jf), rows)
     return groups
+
+
+POLICY_SKIPPED = []
+
+
+def filter_groups(groups, policy, retired, all_classes=False, only=None, include_retired=False):
+    keep, skipped = [], []
+    for g in groups:
+        rel = g[0]
+        cls = CLASS_BY_REL.get(rel)
+        if cls is None:                     # 非会话文件（START/lines/knowledge）不受 class 影响
+            keep.append(g)
+            continue
+        sid = SID_BY_REL.get(rel)
+        reason = ''
+        if sid in retired and not include_retired:
+            reason = 'retired'
+        elif not sp_policy.included(cls, policy, all_classes, only):
+            reason = REASON_BY_REL.get(rel) or ('class=' + cls)
+        if reason:
+            skipped.append({'path': rel, 'class': cls, 'sid': sid,
+                            'reason': reason, 'blocks': len(g[2])})
+        else:
+            keep.append(g)
+    return keep, skipped
+
+
+def apply_policy(con, skipped, operator='sp_index'):
+    """删除 policy 跳过的源块 + src_state；返回删掉的块数。"""
+    n = 0
+    paths = []
+    for x in skipped:
+        p = x['path']
+        if p.endswith('/transcript.jsonl'):
+            paths.append(p)
+        elif p.endswith('/subagents.md') or p.endswith('.jsonl'):
+            paths.append(p)
+    for p in paths:
+        n += con.execute('select count(*) from chunks where path=?', (p,)).fetchone()[0]
+        con.execute('delete from chunks where path=?', (p,))
+        con.execute('delete from src_state where path=?', (p,))
+    con.commit()
+    try:
+        os.makedirs(os.path.join(SSOT, 'logs'), exist_ok=True)
+        with open(os.path.join(SSOT, 'logs', 'index-ops.jsonl'), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({'ts': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                                'op': 'apply-policy', 'version': active_version(),
+                                'db': DB, 'operator': operator,
+                                'paths': paths, 'blocks_removed': n}, ensure_ascii=False) + '\n')
+    except Exception:
+        pass
+    return n
 
 
 def embed_batch(texts, timeout=300):
@@ -615,7 +722,9 @@ def _try_lock(fd):
 
 
 def main():
-    global DB
+    global DB, POLICY, RETIRED, SKIPPED, POLICY_SKIPPED
+    POLICY = sp_policy.load_policy(SSOT)
+    RETIRED, _retired_events = sp_policy.load_retired(SSOT)
     if '--status' in sys.argv:
         # 只读：放在实例锁之前，构建进行中也能查版本与块数
         print("active: %s" % (active_version() or '(legacy index.db)'))
@@ -623,6 +732,7 @@ def main():
         print("config: batch=%d(%s) workers=%d(%s) profile=%s" % (
             BATCH, BATCH_SOURCE, WORKERS, WORKERS_SOURCE,
             PROFILE if os.path.exists(PROFILE) else '-'))
+        print("policy: %s" % sp_policy.summary(POLICY, len(RETIRED)))
         if WORKERS > 1:
             print("note  : workers>1 仅登记，未启用（03 号负结果；默认 1）")
         for name, st, n, m in list_versions():
@@ -631,7 +741,8 @@ def main():
         return 0
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from sp_contract import guard as _contract_guard
-    if not _contract_guard('sp_index', write=True):
+    args = sys.argv[1:]
+    if not _contract_guard('sp_index', write=('--plan' not in args)):
         return 2
     # 实例锁（2026-10-15）：增量/全量互斥——防 launchd 值守与手动跑并发双写（曾致重复块，见当日去重记录）
     os.makedirs(os.path.dirname(DB), exist_ok=True)
@@ -639,7 +750,6 @@ def main():
     if not _try_lock(lock_fd):
         return 3
     t0 = time.time()
-    args = sys.argv[1:]
 
     def _fmt_ver(row):
         name, st, n, m = row
@@ -721,7 +831,7 @@ def main():
         if not os.path.exists(DB):
             sys.exit('索引不存在——先跑全量')
         refresh_pack()
-        write_build()
+        write_build(preserve_policy=True)
         return
     if '--fts-only' in sys.argv:
         if not os.path.exists(DB):
@@ -730,14 +840,64 @@ def main():
         ensure_fts(con, rebuild=True)
         con.commit()
         con.close()
-        write_build()
+        write_build(preserve_policy=True)
         print('✅ FTS trigram 重建完成')
         return
     inc = ('--incremental' in args) or not ('--build' in args or '--full' in args)
+    only_classes = None
+    for i, x in enumerate(args):
+        if x == '--class' and i + 1 < len(args):
+            only_classes = set(v.strip() for v in args[i + 1].split(',') if v.strip())
+        elif x.startswith('--class='):
+            only_classes = set(v.strip() for v in x.split('=', 1)[1].split(',') if v.strip())
+    all_classes = '--all-classes' in args
+    include_retired = '--include-retired' in args
+
+    CLASS_BY_REL.clear(); REASON_BY_REL.clear(); SID_BY_REL.clear()
+    CLASS_BY_DIR.clear(); SID_BY_DIR.clear()
     fg = file_groups()
     sg = s1_groups()
     sas = sa_groups()
-    groups = fg + sg + sas
+    all_groups = fg + sg + sas
+    # policy 级跳过（不受 --class/--all-classes 影响；用于 --apply-policy 和观测）
+    _, POLICY_SKIPPED = filter_groups(all_groups, POLICY, RETIRED, False, None, False)
+    groups, SKIPPED = filter_groups(all_groups, POLICY, RETIRED,
+                                    all_classes, only_classes, include_retired)
+
+    if '--plan' in args:
+        print(f"policy: {sp_policy.summary(POLICY, len(RETIRED))}")
+        print(f"include: {len(groups)} 源 / {sum(len(g[2]) for g in groups)} 块")
+        print(f"skip:    {len(SKIPPED)} 源 / {sum(x['blocks'] for x in SKIPPED)} 块")
+        for x in SKIPPED[:100]:
+            print(f"  - {x['sid'][:8]} [{x['class']}] {x['reason']} · {x['path']} ({x['blocks']} 块)")
+        if len(SKIPPED) > 100:
+            print(f"  … 其余 {len(SKIPPED) - 100} 源")
+        db = resolve_db()
+        if os.path.exists(db):
+            con = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
+            would = 0
+            for x in POLICY_SKIPPED:
+                p = x['path']
+                if os.path.basename(p) in ('transcript.jsonl', 'subagents.md') or p.endswith('.jsonl'):
+                    would += con.execute('select count(*) from chunks where path=?', (p,)).fetchone()[0]
+            con.close()
+            print(f"would remove: {would} 块（--apply-policy）")
+        return 0
+
+    if '--apply-policy' in args:
+        db = resolve_db()
+        if not os.path.exists(db):
+            sys.exit('索引不存在——无可清理')
+        con = sqlite3.connect(db, timeout=30)
+        n = apply_policy(con, POLICY_SKIPPED)
+        con.close()
+        try:
+            write_build()
+        except Exception:
+            pass
+        print(f"✅ apply-policy：清理 {len(POLICY_SKIPPED)} 源 / {n} 块（向量包需 --pack-only 压实）")
+        return 0
+
     if _shard:
         _i, _n = _shard
         groups = groups[_i::_n]

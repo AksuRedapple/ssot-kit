@@ -40,6 +40,10 @@ if [ -f "$KIT/tools/serve_embed.sh" ]; then
   [ "$DRY" = 1 ] || chmod +x "$ROOT/tools/serve_embed.sh"
 fi
 echo "   框架件已同步"
+if [ -f "$KIT/instance/gitignore" ] && [ ! -f "$ROOT/.gitignore" ]; then
+  [ "$DRY" = 1 ] || cp "$KIT/instance/gitignore" "$ROOT/.gitignore"
+  echo "   + 实例 .gitignore"
+fi
 
 if [ -f "$KIT/tools/sp_migrate.py" ]; then
   if [ "$DRY" = 1 ]; then echo "   [dry] python3 tools/sp_migrate.py --to current"; else

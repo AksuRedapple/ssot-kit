@@ -314,9 +314,10 @@ def coverage_line(root):
     idx = sum(r['covered'] for r in rows)
     miss = sum(p['raw'] for p in pending if (roles.get(p['src']) or {}).get('role', 'human') != 'tool')
     tool = sum(p['raw'] for p in pending if (roles.get(p['src']) or {}).get('role') == 'tool')
-    # 未平账缺口 = 各源 S1(减空壳) 未覆盖量 + 未接入人类源；不能用 raw-idx（S1 可能多于 raw）
+    # 未平账缺口 = 各源 S1(减空壳/策略跳过) 未覆盖量 + 未接入人类源；不能用 raw-idx（S1 可能多于 raw）
     unresolved = sum(r.get('gap_idx', 0) for r in rows) + miss
-    return idx, human_raw, miss, tool, unresolved
+    skipped = sum(r.get('skipped', 0) for r in rows)
+    return idx, human_raw, miss, tool, unresolved, skipped
 
 
 def dead_path_examples(tk, limit=3):
@@ -495,8 +496,10 @@ def main():
     cov_note = ''
     cv = coverage_line(root)
     if cv:
-        idx_n, human_n, miss_n, tool_n, unresolved = cv
-        print(f"[coverage] 人类源 {idx_n}/{human_n} 会话 · 未接入 {miss_n}" + (f" · tool 源跳过 {tool_n}" if tool_n else ''))
+        idx_n, human_n, miss_n, tool_n, unresolved, skipped_n = cv
+        print(f"[coverage] 人类源 {idx_n}/{human_n} 会话 · 未接入 {miss_n}"
+              + (f" · 策略跳过 {skipped_n}" if skipped_n else '')
+              + (f" · tool 源跳过 {tool_n}" if tool_n else ''))
         if unresolved > 0:
             cov_note = f"覆盖缺口 {unresolved}"
 

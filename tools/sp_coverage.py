@@ -10,6 +10,9 @@
 """
 import argparse, glob, json, os, sqlite3, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sp_policy  # noqa: E402
+
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
 
@@ -118,22 +121,33 @@ def count_raw(src, raw_dir):
     return n if src != 'qoder' else len(GLOBAL_SIDS)
 
 
-def s1_stats(s1_dir, tiny_bytes=2048):
+def s1_stats(s1_dir, tiny_bytes=2048, policy=None, retired=None):
     p = os.path.join(SSOT, s1_dir)
     if not os.path.isdir(p):
-        return 0, 0, set(), 0
-    dirs, empty, names, tiny = 0, 0, set(), 0
+        return 0, 0, set(), 0, 0
+    dirs, empty, names, tiny, skipped = 0, 0, set(), 0, 0
+    retired = retired or set()
     for d in glob.glob(p + '/*'):
         if not os.path.isdir(d):
             continue
         dirs += 1
-        names.add(os.path.basename(d))
+        name = os.path.basename(d)
+        names.add(name)
+        mp = os.path.join(d, 'meta.json')
+        try:
+            meta = json.load(open(mp, encoding='utf-8'))
+        except Exception:
+            meta = {}
+        sid = sp_policy.sid_of(meta, os.path.relpath(d, SSOT))
+        if sid in retired or not sp_policy.included(sp_policy.class_of(meta), policy):
+            skipped += 1
+            continue
         f = os.path.join(d, 'transcript.jsonl')
         if not os.path.exists(f) or os.path.getsize(f) < EMPTY_BYTES:
             empty += 1
         elif os.path.getsize(f) < tiny_bytes:
             tiny += 1
-    return dirs, empty, names, tiny
+    return dirs, empty, names, tiny, skipped
 
 
 def indexed_map():
@@ -177,17 +191,19 @@ def pending_count(kind, path):
 
 def collect():
     idx = indexed_map()
+    policy = sp_policy.load_policy(SSOT)
+    retired, _ = sp_policy.load_retired(SSOT)
     rows = []
     for src, raw_dir, s1_dir in SOURCES:
         raw = count_raw(src, raw_dir)
-        n1, empty, names, tiny = s1_stats(s1_dir)
+        n1, empty, names, tiny, skipped = s1_stats(s1_dir, policy=policy, retired=retired)
         sub = len(glob.glob(os.path.join(SSOT, s1_dir.replace('S1-sessions', 'S1-subagents'), '*')))
         sess, blocks = idx.get(src, (set(), 0))
         covered = len(names & sess)
-        need = max(0, n1 - empty - tiny)
-        rows.append({'src': src, 'raw': raw, 's1': n1, 'empty': empty,
+        need = max(0, n1 - empty - tiny - skipped)
+        rows.append({'src': src, 'raw': raw, 's1': n1, 'empty': empty, 'skipped': skipped,
                      'indexed': len(sess), 'covered': covered, 'blocks': blocks,
-                     'gap_s1': max(0, raw - n1), 'gap_idx': max(0, n1 - empty - covered),
+                     'gap_s1': max(0, raw - n1), 'gap_idx': max(0, need - covered),
                      'tiny': tiny, 'need': need, 'sub': sub,
                      'status': 'ok' if n1 and covered >= need else ('partial' if n1 else 'none')})
     pending = []
@@ -208,14 +224,14 @@ def main():
                          ensure_ascii=False, indent=1))
         return 0
     rl = roles()
-    print(f"{'源':10s}{'角色':6s}{'原始':>6s}{'S1':>6s}{'子':>4s}{'空壳':>6s}{'已索引':>8s}{'块':>9s}  状态")
+    print(f"{'源':10s}{'角色':6s}{'原始':>6s}{'S1':>6s}{'子':>4s}{'空壳':>6s}{'跳过':>6s}{'已索引':>8s}{'块':>9s}  状态")
     for r in rows:
         role = (rl.get(r['src']) or {}).get('role', 'human')
-        print(f"{r['src']:10s}{role:6s}{r['raw']:6d}{r['s1']:6d}{r.get('sub', 0):4d}{r['empty']:6d}{r['covered']:8d}{r['blocks']:9d}  {r['status']}")
+        print(f"{r['src']:10s}{role:6s}{r['raw']:6d}{r['s1']:6d}{r.get('sub', 0):4d}{r['empty']:6d}{r.get('skipped', 0):6d}{r['covered']:8d}{r['blocks']:9d}  {r['status']}")
     for p in pending:
         role = (rl.get(p['src']) or {}).get('role', 'human')
         state = 'tool(不抽取)' if role == 'tool' else 'missing(未接入)'
-        print(f"{p['src']:10s}{role:6s}{p['raw']:6d}{'—':>6s}{'—':>6s}{'—':>8s}{'—':>9s}  {state}")
+        print(f"{p['src']:10s}{role:6s}{p['raw']:6d}{'—':>6s}{'—':>6s}{'—':>6s}{'—':>8s}{'—':>9s}  {state}")
     human_raw = sum(r['raw'] for r in rows) + sum(p['raw'] for p in pending
                                                   if (rl.get(p['src']) or {}).get('role', 'human') != 'tool')
     tool_raw = sum(r['raw'] for r in pending if (rl.get(p['src']) or {}).get('role') == 'tool')
@@ -228,7 +244,11 @@ def main():
     if tool_raw:
         tail.append(f"tool 源跳过 {tool_raw}(" + ','.join(p['src'] for p in pending
                      if (rl.get(p['src']) or {}).get('role') == 'tool') + ')')
-    print(f"\n结论:已索引 {tot_idx}/{human_raw} 人类源会话" + ('；' + '；'.join(tail) if tail else '；无未接入源'))
+    skipped_total = sum(r.get('skipped', 0) for r in rows)
+    tail_txt = ('；' + '；'.join(tail)) if tail else '；无未接入源'
+    if skipped_total:
+        tail_txt += f'；策略跳过 {skipped_total}'
+    print(f"\n结论:已索引 {tot_idx}/{human_raw} 人类源会话" + tail_txt)
     return 0
 
 

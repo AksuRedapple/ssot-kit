@@ -40,6 +40,7 @@
 | 语义检索 | tools/sp_index.py + sp_semantic.py + serve_embed.sh | 按意思搜（本地模型，可选层） |
 | 会话采集 | tools/sp_sources.py + sp_archive.py | 真源发现、opt-in S0 归档（hardlink 优先） |
 | 关键词兜底 | tools/sp_recall.py | 不依赖索引；S1/S0/live 三层 |
+| 索引生命周期 | tools/sp_policy.py + sp_classify.py + sp_exit.py + sp_golden.py | 分类摄入、stable-sid 退出、golden 回归 |
 | 会话普查 | tools/scan_sessions.py | 存量盘点（Qoder 会话 → TSV） |
 | 自查 | tools/ssot_check.py | 台账/收件箱/缓存健康检查 |
 | 升级通道 | `tools/install/update.sh`（`scripts/update.sh` 为兼容包装）+ UPGRADE.md | 下游升级一条命令 |

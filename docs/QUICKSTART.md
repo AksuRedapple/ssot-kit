@@ -57,6 +57,16 @@ python3 ~/ssot/tools/sp_index.py --incremental
 
 > `evidence/` 里是会话原文，视同个人数据；不要提交到公开仓，也不要把 `SSOT_REPORT.md` 之类的体检产物原样外发。
 
+**3.6）分类与退出（可选，索引层）**
+
+```bash
+python3 ~/ssot/tools/sp_classify.py --init
+python3 ~/ssot/tools/sp_classify.py --scan      # 预览 class/reason
+python3 ~/ssot/tools/sp_index.py --plan         # 预览 include/skip
+# 确认后：sp_classify.py --apply → sp_index.py --incremental
+# 退出：sp_exit.py --make-manifest → --retire --apply → --verify
+```
+
 ## 三条可用性验证
 
 **① 体检一行**

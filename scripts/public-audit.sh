@@ -36,6 +36,22 @@ sensitive = {
 }
 
 issues = []
+forbidden = {
+    "profile/golden-baseline.json": "golden baseline is instance data (contains real queries/source ids)",
+    "profile/retired.jsonl": "retirement tombstones are instance data",
+    "profile/embed-profile.json": "machine profile contains local model paths",
+    "profile/index-policy.json": "instance policy (use instance/profile template instead)",
+}
+for rel, why in forbidden.items():
+    if (root / rel).exists():
+        issues.append(f"{rel}: forbidden in public kit — {why}")
+for d in ("evidence", "S2-index", "models", "logs", "alerts", "backups", "compile"):
+    if (root / d).exists():
+        issues.append(f"{d}/: forbidden instance directory in public kit")
+for p in root.rglob("*golden-baseline*"):
+    if p.is_file():
+        issues.append(f"{p.relative_to(root)}: forbidden golden baseline artifact")
+
 texts = {}
 for path in files:
     try:

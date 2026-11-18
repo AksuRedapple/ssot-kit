@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "enabled": true,
+  "include": ["human", "decision", "unknown"],
+  "skip": ["automation", "monitor"],
+  "rules": [],
+  "heuristics": false
+}

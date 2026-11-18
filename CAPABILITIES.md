@@ -1,4 +1,4 @@
-# kit 能力清单（v0.14.0 · 2026-11-18）
+# kit 能力清单（v0.15.0 · 2026-11-18）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -7,7 +7,7 @@
 
 | 工具 | 用途 | 最小用法 |
 |---|---|---|
-| `sp_index.py` | 建/更新语义索引（源级增量 + 向量包增量追加/压实；失败不覆盖旧库） | `python3 tools/sp_index.py --incremental` |
+| `sp_index.py` | 建/更新语义索引（源级增量 + 向量包增量/压实；`--plan` 预览 class 策略；失败不覆盖旧库） | `python3 tools/sp_index.py --incremental` |
 | `sp_semantic.py` | 按意思搜（多模式 + 查询路由） | `python3 tools/sp_semantic.py "<问题>" --mode route3 --top 5` |
 | `sp_compile.py` | 正本 → agent 记忆薄壳（可选 `--target` 换落点） | `python3 tools/sp_compile.py --mem --deploy` |
 | `ssot_check.py` | 体检：台账/收件箱/索引/覆盖/接手面/线页漂移/conf 归一化 | `python3 tools/ssot_check.py` |
@@ -27,6 +27,10 @@
 | `sp_archive.py` | S0 归档（opt-in；默认 dry-run，同卷 hardlink，跨卷 copy） | `python3 tools/sp_archive.py --apply` |
 | `sp_recall.py` | 关键词兜底检索（不依赖索引；S1/S0/live 三层，输出脱敏） | `python3 tools/sp_recall.py "<关键词>" --raw` |
 | `sp_drafts.py` | 收尾草稿 → registry 候选行（只读，不自动转正） | `python3 tools/sp_drafts.py --list` |
+| `sp_classify.py` | S1 会话分类（session_class）backfill / 规则扫描 / 手工覆盖 | `python3 tools/sp_classify.py --scan` |
+| `sp_exit.py` | 索引退出：stable sid manifest / tombstone / verify / 审计 | `python3 tools/sp_exit.py --retire <manifest> --apply` |
+| `sp_golden.py` | golden 回归；本机 agent 用 `--init/--suggest` 产出查询，基线只落实例 | `python3 tools/sp_golden.py --init` / `--check` |
+| `sp_policy.py` | 策略读取库（index-policy / retired），供上面四件共用 | 被 `sp_index` / `sp_coverage` 调用 |
 | `sp_embed_bench.py` | 嵌入吞吐基准（只读，不写索引/不重启服务） | `python3 tools/sp_embed_bench.py --quick` |
 | `sp_embed_autotune.py` | 探测 + 基准 → `profile/embed-profile.json`（不自动重启） | `python3 tools/sp_embed_autotune.py --bench --quick --apply` |
 | `serve_embed.sh` | 嵌入服务启动；读 profile，env 可覆盖 | `EMBED_CONFIG_DRY=1 bash tools/serve_embed.sh` |

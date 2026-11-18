@@ -45,6 +45,17 @@ python3 ~/ssot/tools/sp_compile.py --mem --deploy
 
 **恢复原状**：`ls ~/ssot/compile/MEMORY.*.bak-*` 找备份 → `cp` 回原路径 → 删除 `~/ssot/compile/MEMORY.candidate.md`。
 
+### 3c. 分类与退出（可选，索引层）
+
+```bash
+python3 ~/ssot/tools/sp_classify.py --init
+python3 ~/ssot/tools/sp_classify.py --scan      # 先看，不写
+python3 ~/ssot/tools/sp_index.py --plan         # 看会跳过谁
+```
+
+确认规则后再 `sp_classify.py --apply`；退出用 `sp_exit.py --make-manifest/--retire/--verify`。
+详见 `docs/SEMANTIC.md` §五·五。
+
 ### 4. 存量普查（核心）
 1. `python3 ~/ssot/tools/scan_sessions.py > /tmp/ssmap-scan.tsv`
 2. 按 `docs/SSMAP.md` §三 聚类 → 草稿 `~/ssot/sessions/registry.md` + `~/ssot/lines/<线名>.md`

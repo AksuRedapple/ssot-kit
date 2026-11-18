@@ -54,12 +54,18 @@ n=0
 if [ -d "$KIT/instance" ]; then
   while IFS= read -r f; do
     rel="${f#$KIT/instance/}"
+    [ "$rel" = "gitignore" ] && continue
     if [ ! -f "$ROOT/$rel" ]; then
       n=$((n+1))
       if [ "$DRY" = 0 ]; then mkdir -p "$(dirname "$ROOT/$rel")"; cp "$f" "$ROOT/$rel"; fi
       echo "   + 模板 $rel"
     fi
   done < <(find "$KIT/instance" -type f 2>/dev/null)
+fi
+# 实例 .gitignore：模板名 gitignore（避免 instance/.gitignore 把模板自己忽略）
+if [ -f "$KIT/instance/gitignore" ] && [ ! -f "$ROOT/.gitignore" ]; then
+  if [ "$DRY" = 0 ]; then cp "$KIT/instance/gitignore" "$ROOT/.gitignore"; fi
+  echo "   + 模板 .gitignore"
 fi
 
 # 技能分发（只补缺）

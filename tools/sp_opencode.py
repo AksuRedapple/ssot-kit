@@ -143,11 +143,19 @@ def write_s1(root, con, s, force=False):
     if not rows:                       # 无正文的会话不落盘(否则覆盖率永远差一条)
         return d, 0
     os.makedirs(d, exist_ok=True)
+    meta = {'sid': sid, 'src': 'opencode', 'session_id': s[0], 'title': s[1],
+            'dir': s[3], 'created': s[2], 'updated': s[4],
+            'origin': 'subagent' if is_sub else 'human',
+            'store': store, 'schema_version': 1, 'schema': 2}
+    try:
+        old = json.load(open(os.path.join(d, 'meta.json'), encoding='utf-8'))
+        for k in ('session_class', 'class_reason', 'class_source', 'classified_at'):
+            if old.get(k):
+                meta[k] = old[k]
+    except Exception:
+        pass
     with open(os.path.join(d, 'meta.json'), 'w', encoding='utf-8') as f:
-        json.dump({'sid': sid, 'src': 'opencode', 'session_id': s[0], 'title': s[1],
-                   'dir': s[3], 'created': s[2], 'updated': s[4],
-                   'origin': 'subagent' if is_sub else 'human',
-                   'store': store, 'schema_version': 1, 'schema': 2}, f, ensure_ascii=False, indent=1)
+        json.dump(meta, f, ensure_ascii=False, indent=1)
     with open(tr, 'w', encoding='utf-8') as f:
         for i, (mts, role, text) in enumerate(rows, 1):
             f.write(json.dumps({'t': datetime.datetime.fromtimestamp(mts / 1000).astimezone().isoformat() if mts else '',

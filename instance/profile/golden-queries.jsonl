@@ -1,0 +1,2 @@
+# golden 查询模板：一行一个 JSON；换成你自己的 query / expect_sids（会话 sid 前缀）
+# {"id":"g1","query":"某个只有你知道答案的问题","expect_sids":["1a2b3c4d"],"expect_keywords":["关键词"]}

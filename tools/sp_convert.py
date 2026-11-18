@@ -457,6 +457,14 @@ def convert(path, title_override=None, force=False):
     schema = contract_schema()
     if schema:
         meta['schema'] = schema
+    # 重转不丢分类（2026-11-18）：session_class 是人工/规则资产，不随 transcript 重写消失
+    try:
+        old_meta = json.load(open(os.path.join(outdir, 'meta.json'), encoding='utf-8'))
+        for k in ('session_class', 'class_reason', 'class_source', 'classified_at'):
+            if old_meta.get(k):
+                meta[k] = old_meta[k]
+    except Exception:
+        pass
     with open(os.path.join(outdir, 'meta.json'), 'w') as f:
         f.write(scrub(json.dumps(meta, ensure_ascii=False, indent=2)))
     return outdir, counts, len(rows)

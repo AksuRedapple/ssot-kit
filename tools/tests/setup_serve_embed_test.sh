@@ -10,6 +10,9 @@ bash "$KIT/tools/install/setup.sh" --root "$T/ssot" --skills-dir "$T/skills" >/t
 chk "$?" "0" "setup rc=0"
 chk "$([ -f "$T/ssot/tools/serve_embed.sh" ] && echo y || echo n)" "y" "serve_embed.sh 已落位"
 chk "$([ -x "$T/ssot/tools/serve_embed.sh" ] && echo y || echo n)" "y" "serve_embed.sh 可执行"
+chk "$([ -f "$T/ssot/.gitignore" ] && echo y || echo n)" "y" "实例 .gitignore 已落位"
+chk "$([ -f "$T/ssot/profile/index-policy.json" ] && echo y || echo n)" "y" "index-policy 模板已落位"
+chk "$([ -f "$T/ssot/profile/golden-queries.jsonl" ] && echo y || echo n)" "y" "golden 模板已落位"
 
 # update 也应同步（用同一套复制逻辑，--skip-pull 不联网）
 bash "$KIT/tools/install/update.sh" --root "$T/ssot" --skip-pull --dry >/tmp/update-embed.out 2>&1

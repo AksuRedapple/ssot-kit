@@ -55,6 +55,7 @@ The system separates four lifetimes that are often mixed together:
 - **Candidate governance** — extraction, de-duplication, conflict detection, review, and one-way promotion.
 - **Semantic and keyword recall** — local embeddings with versioned activation, plus an index-free keyword fallback (`sp_recall.py`).
 - **Conservative embedding autotune** — read-only probe/benchmark writes a machine profile; client workers stay at 1 unless a grid proves otherwise.
+- **Index lifecycle** — session classification (`human/automation/monitor/decision`), policy-aware ingestion, stable-sid exit manifests, tombstones, audit log, and golden-query regression.
 - **Read-side automation** — session-start injection, recall hooks, draft capture, and a 6-hour steward.
 - **Installation and update rails** — isolated setup, upgrade, migration, and preflight tests.
 

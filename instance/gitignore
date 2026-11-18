@@ -1,0 +1,17 @@
+# 实例内容层：默认不进公开仓/普通同步
+evidence/
+S2-index/
+models/
+logs/
+alerts/
+backups/
+compile/
+sessions/_pending/
+sessions/.draft-state/
+
+# 机器本地 / 私有评测数据
+profile/embed-profile.json
+profile/index-policy.json
+profile/golden-baseline.json
+profile/golden-queries.jsonl
+profile/retired.jsonl

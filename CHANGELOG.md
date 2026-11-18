@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.15.0] - 2026-11-18 — 索引生命周期、退出验收与 golden 回归
+
+- **feat(lifecycle)**: 新增 `sp_classify.py`（session_class 规则/backfill/手工覆盖）与 `profile/index-policy.json`；`sp_index --plan/--all-classes/--class/--apply-policy` 按类过滤，`BUILD.json` 记 policy/skipped
+- **feat(exit)**: 新增 `sp_exit.py`（stable sid manifest / `retired.jsonl` tombstone / verify / 审计 `logs/index-ops.jsonl`）；退出只删索引块，S0/S1 保留，`sp_index` 永久跳过
+- **feat(golden)**: 新增 `sp_golden.py`（`--init/--suggest` 由本机 agent 产出查询；`--capture/--check` 记基线/回归），`golden-queries.jsonl` 只随实例、不随公开仓
+- **fix(coverage)**: policy 跳过的会话单列 `skipped`，不再算覆盖缺口；`ssot_check [coverage]` 同步
+- **fix(convert)**: `sp_convert/sp_dsh/sp_opencode` 重转时保留 `session_class`，不丢分类
+- **fix(public-surface)**: `public-audit.sh` 拒绝 golden 基线、retired 表、机器 profile 与实例目录进入 kit 根；新增 `instance/.gitignore` 模板（evidence/S2-index/models/profile 私有项）
+- **test**: 新增分类/策略/退出/golden/公开面 forbidden 回归；kit 随包测试仍全绿
+
 ## [0.14.0] - 2026-11-18 — 会话层采集闭环与体检读数修复
 
 - **fix(sp_coverage)**: 版本化索引后优先读 `active.json → versions/<v>/index.db`，不再恒报「已索引 0」；legacy 单库仍可回退

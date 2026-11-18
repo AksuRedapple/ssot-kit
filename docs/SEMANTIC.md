@@ -152,6 +152,42 @@ lines/_draft-*
 重建索引时命中即跳过；适合放「不可入库」的历史档案或本机生成物。语料清洗规则与统计建议
 另放 `sessions/corpus/_CLEANING.md`，保证「语料≠原文」可追溯。
 
+## 五·五、索引生命周期（分类与退出，v0.15 候选）
+
+**分类摄入（opt-in）**
+
+```bash
+python3 tools/sp_classify.py --init                 # 建 profile/index-policy.json（默认 enabled，无规则）
+python3 tools/sp_classify.py --scan                 # 预览：每条 S1 的 class/reason
+python3 tools/sp_classify.py --scan --heuristic     # 只作为候选，不要直接 apply
+python3 tools/sp_classify.py --apply                # 按 rules 写入 meta（幂等）
+python3 tools/sp_classify.py --set <sid8> --class monitor --reason "钉钉值守"
+python3 tools/sp_index.py --plan                    # 看 include/skip 与 would-remove
+python3 tools/sp_index.py --apply-policy            # 显式删 policy 跳过的块
+```
+
+- class：`human / automation / monitor / decision / unknown`，缺省 human。
+- 规则优先、启发式只作建议；含真实决策的自动化会话必须人工改回。
+- `--all-classes` 可强制全量索引；`--class c1,c2` 单类补录。
+- 无 policy 文件 = 关闭（向后兼容）；`sp_coverage` 把 policy 跳过单列，不算缺口。
+
+**退出（只删索引，不删 S0/S1）**
+
+```bash
+python3 tools/sp_exit.py --make-manifest --class monitor --out logs/exit.jsonl
+python3 tools/sp_exit.py --retire logs/exit.jsonl --reason "值守会话" --apply
+python3 tools/sp_exit.py --verify logs/exit.jsonl
+python3 tools/sp_golden.py --capture --apply        # 退出前录基线
+python3 tools/sp_golden.py --check                  # 退出后 recall 不退化
+```
+
+- 用 `meta.sid` 对账，不用目录名；`profile/retired.jsonl` 是追加式 tombstone，`sp_index` 永久跳过。
+- 审计在 `logs/index-ops.jsonl`；`BUILD.json` 记 `policy/db_bytes/pack_bytes/retired_sources`。
+- `--unretire <sid> --apply` 解除，下一次 `--incremental` 重新入索引。
+- 物理空间不会立即下降；`--full-pack` 才压实。
+- `golden-queries.jsonl` / `golden-baseline.json` 是**实例数据**（含真实 query 与 sid）；公开仓只放 `instance/profile/golden-queries.jsonl` 模板，`public-audit.sh` 会拒绝基线/退休表出现在 kit 根。
+- **golden 由你的 agent 自己产出**：`sp_golden.py --init` → `--suggest`（从本机 lines/断言标题出候选）→ 补 `expect_sids` → `--capture --apply` → `--check`。kit 只负责机制，不携带任何真实基线。
+
 ## 六、常驻服务（可选）
 
 在**系统件仓库根**执行（仓库位置见 `~/ssot/profile/.kit-path`）：
