@@ -2,7 +2,7 @@
 """sp_compile · SSOT → harness 入口候选编译器 (v0.3)
 用法:
   python3 sp_compile.py --mem            # → compile/MEMORY.candidate.md + report（只落 compile/）
-  python3 sp_compile.py --mem --target ~/.claude/CLAUDE.md   # 指定落点(CC/opencode/任意入口)
+  python3 sp_compile.py --mem --target /path/to/MEMORY.md    # 指定 MEMORY 薄壳落点（不要指向 CLAUDE.md！）
   python3 sp_compile.py --mem --deploy   # 生成并切换（超限拒切；前版备份到 compile/）
   python3 sp_compile.py --check          # 现役薄壳 vs 实时生成 对账（0=一致，供 steward）
   python3 sp_compile.py --claude         # → compile/CLAUDE.candidate.md
@@ -13,7 +13,7 @@ v0.3（2026-10-16 薄壳化 · 用户拍板）：MEMORY.md 改为**全量生成�
 v0.2（2026-10-15）：去重退休 + A-max 动态读 + --deploy 硬限校验 + 前版备份。
 v0.1（2026-10-13）：SSOT 段生成。
 """
-import os, re, sys, shutil, datetime, subprocess, json
+import os, re, sys, shutil, datetime, subprocess, json, hashlib
 
 SSOT    = os.path.expanduser('~/ssot')
 COMPILE = os.path.join(SSOT, 'compile')
@@ -116,13 +116,20 @@ def compile_mem():
     return old_bytes, nb, len(ssot_lines), len(boot_lines)
 
 def compile_claude():
-    parts = []
-    parts.append("# CLAUDE.md — 用户级协作画像（跨项目，所有会话生效）")
-    parts.append(f"> ⚡ 本文件为 **SSOT 编译产物**（生成 {datetime.datetime.now():%Y-%m-%d %H:%M} · sp_compile {VERSION}）")
-    parts.append("> 正本：`~/ssot/profile/collaboration.md` + `~/ssot/profile/user.md` —— **改动请改正本**，本文件由编译单向下发。")
-    parts.append("> SSOT 读档入口：`~/ssot/START.md`（工作线全览）；贡献写 `~/ssot/inbox/`\n")
-    parts.append(open(os.path.join(SSOT, 'profile', 'collaboration.md')).read().strip().replace('{{SSOT_CHUNKS}}', chunks_label()))
-    parts.append("\n" + open(os.path.join(SSOT, 'profile', 'user.md')).read().strip())
+    # 易变信息不进前缀：表头用「正本内容哈希」，内容不变则重编译 0 diff（2026-11-14）
+    body_parts = []
+    body_parts.append("> 正本：`~/ssot/profile/collaboration.md` + `~/ssot/profile/user.md` —— **改动请改正本**，本文件由编译单向下发。")
+    body_parts.append("> 编译模式：本文件只用 `--claude`（全量）；`--mem` 是 MEMORY 薄壳，两者不可混用。")
+    body_parts.append("> SSOT 读档入口：`~/ssot/START.md`（工作线全览）；贡献写 `~/ssot/inbox/`\n")
+    body_parts.append(open(os.path.join(SSOT, 'profile', 'collaboration.md')).read().strip().replace('{{SSOT_CHUNKS}}', chunks_label()))
+    body_parts.append("\n" + open(os.path.join(SSOT, 'profile', 'user.md')).read().strip())
+    body = '\n\n'.join(body_parts)
+    h = hashlib.sha256(body.encode('utf-8')).hexdigest()[:10]
+    parts = [
+        "# CLAUDE.md — 用户级协作画像（跨项目，所有会话生效）",
+        f"> ⚡ 本文件为 **SSOT 编译产物**（正本哈希 `{h}` · sp_compile {VERSION}）",
+        body,
+    ]
     os.makedirs(COMPILE, exist_ok=True)
     dst = os.path.join(COMPILE, 'CLAUDE.candidate.md')
     with open(dst, 'w') as f:

@@ -36,15 +36,44 @@ def git(root, *args):
         return ''
 
 
+def _versioned_build(root_build, data):
+    """根 BUILD.json 只是在线清单：有 db/active 时，真正的读数在 versions/<v>/BUILD.json。
+
+    2026-11-18：修复 --adopt/--full 后仍读根清单的 chunks/built_at，
+    导致 [build] 长期显示迁移前的旧块数与旧构建时间。
+    """
+    base = os.path.dirname(root_build)
+    db = data.get('db')
+    if db:
+        dbp = db if os.path.isabs(db) else os.path.join(base, db)
+        cand = os.path.join(os.path.dirname(os.path.normpath(dbp)), 'BUILD.json')
+        if os.path.exists(cand):
+            return cand
+    v = data.get('active')
+    if v:
+        cand = os.path.join(base, 'versions', str(v), 'BUILD.json')
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
 def find_build(root):
     for rel in ('S2-index/semantic/BUILD.json', 'kb-index/BUILD.json'):
         p = os.path.join(root, rel)
         if os.path.exists(p):
             try:
                 with open(p, encoding='utf-8') as f:
-                    return p, json.load(f)
+                    data = json.load(f)
             except Exception:
                 return p, {}
+            vp = _versioned_build(p, data) if rel.startswith('S2-index/') else None
+            if vp:
+                try:
+                    with open(vp, encoding='utf-8') as f:
+                        return vp, json.load(f)
+                except Exception:
+                    pass
+            return p, data
     return None, {}
 
 
@@ -100,7 +129,14 @@ CONF_PREFIXES = ('实测', '推断', '推算', '待核')
 
 
 def normalize_conf(value):
-    """把常见 conf 写法归一到四前缀；决定/用户令这类无置信度的行返回 None。"""
+    """把常见 conf 写法归一到四前缀；决定/用户令这类无置信度的行返回 None。
+
+    归一规则（2026-11-14 放宽，只认语义不认字面）：
+    - 实测：亲自跑过/亲眼看过 —— 实测、设备实测、代码、单测、源码、编译、现场、
+      对端实测（对方实测回执）、明示（来源明确陈述，非推断）、以及「0 ERROR / PASS / 全绿」这类检查结果
+    - 推断：文档核验 / 文档（照文档写的，没装机跑）
+    - 推算 / 待核：原样
+    """
     v = (value or '').strip().strip('*').strip()
     if not v:
         return None
@@ -109,15 +145,18 @@ def normalize_conf(value):
         p = part.strip().strip('*').strip()
         if not p:
             continue
-        if p.startswith(('实测', '设备实测', '代码', '单测')) or p == '源码':
+        if p.startswith(('实测', '设备实测', '代码', '单测', '编译', '现场', '对端实测', '源码', '明示')):
+            hits.append('实测')
+        elif re.search(r'0\s*ERROR|\bPASS\b|全绿|全过', p):
+            # conf 里写的是“检查结果”而不是置信度短语：按实测计入，别当非法值刷屏
             hits.append('实测')
         elif p.startswith('推算'):
             hits.append('推算')
-        elif p.startswith('推断'):
+        elif p.startswith(('推断', '文档')):
             hits.append('推断')
         elif p.startswith('待核'):
             hits.append('待核')
-        # 决定 / 用户令 / owner 是“谁定的”，不是置信度，直接不参与 conf
+        # 决定 / 决策 / 用户令 / owner 是“谁定的”，不是置信度，直接不参与 conf
     for x in ('实测', '推算', '推断', '待核'):
         if x in hits:
             return x
@@ -134,11 +173,13 @@ def inbox_stats(root):
             if not line.startswith('- '):
                 continue
             total += 1
-            m = re.search(r'\bconf:\s*([^|]+)', line)
+            # (?<![\w.]) 防误命中文件名/配置键：`_meta/agents.conf:pi 行` 曾被当成 conf 值；
+            # 值到 `|`/`｜`/全角括号/反引号/换行即止，防正文里提到 `conf:` 时把后文整段吃成值
+            m = re.search(r'(?<![\w.])conf:\s*([^|｜（`\n]+)', line)
             if m:
                 value = re.split(r'→', m.group(1))[0].strip()  # 去掉行尾 → 归位 标记
-                # 决定 / 用户令 / owner 不是置信度字段；不计 bad，也不计入 conf
-                if value.startswith(('决定', '用户令', 'owner')):
+                # 决定 / 决策 / 用户令 / owner 不是置信度字段；不计 bad，也不计入 conf
+                if value.startswith(('决定', '决策', '用户令', 'owner')):
                     continue
                 nv = normalize_conf(value)
                 if nv:
@@ -273,7 +314,22 @@ def coverage_line(root):
     idx = sum(r['covered'] for r in rows)
     miss = sum(p['raw'] for p in pending if (roles.get(p['src']) or {}).get('role', 'human') != 'tool')
     tool = sum(p['raw'] for p in pending if (roles.get(p['src']) or {}).get('role') == 'tool')
-    return idx, human_raw, miss, tool
+    # 未平账缺口 = 各源 S1(减空壳) 未覆盖量 + 未接入人类源；不能用 raw-idx（S1 可能多于 raw）
+    unresolved = sum(r.get('gap_idx', 0) for r in rows) + miss
+    return idx, human_raw, miss, tool, unresolved
+
+
+def dead_path_examples(tk, limit=3):
+    """从 takeover detail 里取前几条死路径，格式：线页.md:L601 tools/x.sh。"""
+    out = []
+    for page, rules in (tk.get('detail') or {}).items():
+        for msg in (rules.get('R3') or []):
+            m = re.match(r'L(\d+)\s+路径不存在:\s*(.+)$', msg)
+            if m:
+                out.append(f"{page}:L{m.group(1)} {m.group(2)}")
+                if len(out) >= limit:
+                    return out
+    return out
 
 
 def takeover_line(root):
@@ -436,10 +492,13 @@ def main():
         print(f"[cite] 断言被引用 {nc}/{nt}（{nc * 100 // nt}%）")
 
     # 2e. 覆盖审计（2026-10-31）
+    cov_note = ''
     cv = coverage_line(root)
     if cv:
-        idx_n, human_n, miss_n, tool_n = cv
+        idx_n, human_n, miss_n, tool_n, unresolved = cv
         print(f"[coverage] 人类源 {idx_n}/{human_n} 会话 · 未接入 {miss_n}" + (f" · tool 源跳过 {tool_n}" if tool_n else ''))
+        if unresolved > 0:
+            cov_note = f"覆盖缺口 {unresolved}"
 
     # 2h. 断言 verify 字段(2026-11-04)
     vl = verify_lint(root)
@@ -453,8 +512,10 @@ def main():
     # 2f. 接手面自检(2026-11-03)
     tk = takeover_line(root)
     if tk:
+        ex = dead_path_examples(tk)
         print(f"[takeover] {tk['pages']} 页 · 状态行 {tk['status_ok']} · 在途 {tk['todo']}(判据+owner {tk['todo_with_criteria']})"
-              f" · 死路径 {tk['dead_paths']}(建议) · 断链 {tk['broken_links']}")
+              f" · 死路径 {tk['dead_paths']}(建议) · 断链 {tk['broken_links']}"
+              + (f" · 例: {'；'.join(ex)}" if ex else ''))
 
     # 3. 线页
     ldir = os.path.join(root, 'lines')
@@ -507,8 +568,15 @@ def main():
         if bc and bc != '-' and head and bc != head:
             n = git(root, 'rev-list', '--count', f'{bc}..HEAD')
             lag = f'落后 {n} commits' if n else 'commit 不同'
+        cfg = build.get('config') or {}
+        tp = build.get('throughput_chunks_per_s')
+        extra = ''
+        if cfg:
+            extra += f" · batch {cfg.get('batch', '?')}/workers {cfg.get('workers', '?')}"
+        if tp:
+            extra += f" · {tp} 块/秒"
         print(f"[build] {os.path.relpath(build_path, root)} · commit {bc} · "
-              f"{build.get('chunks', '?')} 块 · {build.get('built_at', '?')}" +
+              f"{build.get('chunks', '?')} 块 · {build.get('built_at', '?')}{extra}" +
               (f'（{lag}）' if lag else ''))
     else:
         print('[build] 无 BUILD.json（索引尚未记录 built_at_commit）')
@@ -523,7 +591,20 @@ def main():
     drill = os.path.basename(drills[-1]) if drills else '-'
     print(f'[pending] 草稿 {drafts}；[open-loops] {loops}；[drill] {drill}')
 
-    print('== 完成 ==' + (f'（{issues} 项需处理）' if issues else '（健康）'))
+    # 完成态汇总：阻断项 + 非阻断提示（2026-11-18：原先只报 issues，死路径/覆盖缺口看不见）
+    notes = []
+    if cov_note:
+        notes.append(cov_note)
+    if tk and tk.get('dead_paths'):
+        notes.append(f"死路径 {tk['dead_paths']}")
+    if lag and lag.startswith('落后'):
+        notes.append(f"索引{lag}")
+    if drafts:
+        notes.append(f"草稿 {drafts}")
+    tail = f"{issues} 项需处理" if issues else "健康"
+    if notes:
+        tail += "；提示 " + "、".join(notes)
+    print(f'== 完成 ==（{tail}）')
 
     if a.report:
         now = datetime.datetime.now().astimezone().isoformat(timespec='seconds')

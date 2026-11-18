@@ -16,6 +16,8 @@ v4.1（2026-11-04）：摘要口径收窄——会话指纹 = jsonl md5 + meta �
 --pack-only   只重建向量包，不重嵌
 --no-wait     锁被占用时立即退出（退出码 3）
 --wait-timeout 等锁上限，默认 1800s
+--status      只读：active/库/版本/config（batch 来自 profile 或 SP_INDEX_BATCH）
+配置: client.batch 优先级 SP_INDEX_BATCH > profile/embed-profile.json > 32；workers 默认 1（并发未启用）
 隐私闸：源文本命中完整密钥形态时拒绝索引（先脱敏）；仅确认为文档示例时才可加 --allow-secret-files。
 """
 import glob
@@ -33,8 +35,10 @@ import sys
 import time
 import urllib.request
 
-SSOT = os.path.expanduser('~/ssot')
+SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
+PROFILE = os.path.expanduser(os.environ.get(
+    'EMBED_PROFILE', os.path.join(SSOT, 'profile', 'embed-profile.json')))
 DB = os.path.join(SEM, 'index.db')          # legacy（v1 单库）；版本化后仅作兜底
 VERS = os.path.join(SEM, 'versions')        # 每个全量构建一个版本目录
 ACTIVE = os.path.join(SEM, 'active.json')   # 唯一在线指针（原子切换）
@@ -134,7 +138,50 @@ def prune_versions(keep=2):
     return removed
 API = 'http://127.0.0.1:8399/v1/embeddings'
 DOC_PREFIX = 'title: none | text: '
-BATCH = 32
+RUN_META = {}
+
+
+def _profile_client():
+    try:
+        with open(PROFILE, encoding='utf-8') as f:
+            c = json.load(f).get('client') or {}
+        return c if isinstance(c, dict) else {}
+    except Exception:
+        return {}
+
+
+def _clamp_int(v, lo, hi, default):
+    try:
+        v = int(v)
+    except Exception:
+        return default
+    return max(lo, min(hi, v))
+
+
+def resolve_batch():
+    """优先级：SP_INDEX_BATCH > profile.client.batch > 32。"""
+    env = os.environ.get('SP_INDEX_BATCH')
+    if env:
+        return _clamp_int(env, 8, 512, 32), 'env'
+    v = _profile_client().get('batch')
+    if v is not None:
+        return _clamp_int(v, 8, 512, 32), 'profile'
+    return 32, 'default'
+
+
+def resolve_workers():
+    """workers 只登记不启用：03 号补充实测 8 路并发为负收益，默认 1。"""
+    env = os.environ.get('SP_INDEX_WORKERS')
+    if env:
+        return _clamp_int(env, 1, 8, 1), 'env'
+    v = _profile_client().get('workers')
+    if v is not None:
+        return _clamp_int(v, 1, 8, 1), 'profile'
+    return 1, 'default'
+
+
+BATCH, BATCH_SOURCE = resolve_batch()
+WORKERS, WORKERS_SOURCE = resolve_workers()
 
 # --- 分片/自定义库(2026-10-25,为多进程并建+合并而加;不影响默认行为) ---
 _shard = None
@@ -234,10 +281,19 @@ def write_build():
     except Exception:
         n = 0
     data = {'built_at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
-            'commit': git_commit(), 'chunks': n, 'root': SSOT}
+            'commit': git_commit(), 'chunks': n, 'root': SSOT,
+            'config': {'batch': BATCH, 'batch_source': BATCH_SOURCE,
+                       'workers': WORKERS, 'workers_source': WORKERS_SOURCE}}
     schema = contract_schema()
     if schema:
         data['schema'] = schema
+    if RUN_META:
+        data['run'] = dict(RUN_META)
+        sec = RUN_META.get('seconds') or 0
+        emb = RUN_META.get('embedded') or 0
+        # 小增量（<50 块）的“吞吐”由固定开销主导，记录反而误导；只记完整构建或成规模增量
+        if sec > 0 and emb and (RUN_META.get('mode') == 'full' or emb >= 50):
+            data['throughput_chunks_per_s'] = round(emb / sec, 1)
     try:
         with open(os.path.join(os.path.dirname(DB), 'BUILD.json'), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -564,6 +620,11 @@ def main():
         # 只读：放在实例锁之前，构建进行中也能查版本与块数
         print("active: %s" % (active_version() or '(legacy index.db)'))
         print("db    : %s" % resolve_db())
+        print("config: batch=%d(%s) workers=%d(%s) profile=%s" % (
+            BATCH, BATCH_SOURCE, WORKERS, WORKERS_SOURCE,
+            PROFILE if os.path.exists(PROFILE) else '-'))
+        if WORKERS > 1:
+            print("note  : workers>1 仅登记，未启用（03 号负结果；默认 1）")
         for name, st, n, m in list_versions():
             print("  %-30s %-10s chunks=%-7s %s" % (
                 name, st, n, datetime.datetime.fromtimestamp(m).strftime('%m-%d %H:%M')))
@@ -740,6 +801,9 @@ def main():
         con.execute('drop table if exists src_state')
         con.execute('create table src_state(path text primary key, digest text)')
         n = embed_and_store(con, [g[0] for g in groups], blocks, t0)
+        RUN_META.clear()
+        RUN_META.update({'mode': 'full', 'embedded': n, 'reused': 0,
+                         'seconds': round(time.time() - t0, 1)})
         con.executemany('insert or replace into src_state(path,digest) values(?,?)',
                         list(digests.items()))
         ensure_fts(con, rebuild=True)
@@ -815,6 +879,9 @@ def main():
         n, reused = embed_and_store_diff(con, todo, blocks, old_rows, t0)
     else:
         n, reused = embed_and_store(con, todo, blocks, t0), 0
+    RUN_META.clear()
+    RUN_META.update({'mode': 'incremental', 'embedded': n, 'reused': reused,
+                     'seconds': round(time.time() - t0, 1)})
     con.executemany('insert or replace into src_state(path,digest) values(?,?)',
                     [(p, digests[p]) for p in todo])
     con.commit()

@@ -20,7 +20,9 @@ done
 
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
 SERVE="$ROOT/tools/serve_embed.sh"
-MODEL="$ROOT/models/embeddinggemma-2-BF16.gguf"
+DEFAULT_MODEL="$ROOT/models/embeddinggemma-2-BF16.gguf"
+MODEL="${EMBED_MODEL:-}"
+if [ -z "$MODEL" ] && [ -f "$DEFAULT_MODEL" ]; then MODEL="$DEFAULT_MODEL"; fi
 LOG="/tmp/ssot-embed.log"
 LABEL="com.ssot.embed"
 
@@ -32,7 +34,13 @@ if [ -z "$LLAMA" ]; then
   echo "⚠️ PATH 中未找到 llama-server；服务将按 PATH 查找。建议用 --llama /path/to/llama-server"
   LLAMA="llama-server"
 fi
-[ -f "$MODEL" ] || echo "⚠️ 缺模型 $MODEL（服务起不来；先按 docs/SEMANTIC.md 拉模型）"
+if [ -n "$MODEL" ] && [ ! -f "$MODEL" ]; then
+  echo "⚠️ 缺模型 $MODEL（服务起不来；先按 docs/SEMANTIC.md 拉模型）"
+fi
+MODEL_XML=""
+[ -n "$MODEL" ] && MODEL_XML="    <key>EMBED_MODEL</key><string>$(printf '%s' "$MODEL" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</string>"
+MODEL_SD=""
+[ -n "$MODEL" ] && MODEL_SD="Environment=EMBED_MODEL=$(printf '%q' "$MODEL")"
 
 xml_escape() {
   printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
@@ -62,7 +70,7 @@ case "$(uname -s)" in
   <key>EnvironmentVariables</key><dict>
     <key>SSOT_ROOT</key><string>$(xml_escape "$ROOT")</string>
     <key>EMBED_PORT</key><string>$PORT</string>
-    <key>EMBED_MODEL</key><string>$(xml_escape "$MODEL")</string>
+$MODEL_XML
     <key>LLAMA_SERVER</key><string>$(xml_escape "$LLAMA")</string>
   </dict>
   <key>RunAtLoad</key><true/>
@@ -96,7 +104,7 @@ Type=simple
 ExecStart=/bin/bash $(printf '%q' "$SERVE")
 Environment=SSOT_ROOT=$(printf '%q' "$ROOT")
 Environment=EMBED_PORT=$PORT
-Environment=EMBED_MODEL=$(printf '%q' "$MODEL")
+$MODEL_SD
 Environment=LLAMA_SERVER=$(printf '%q' "$LLAMA")
 Restart=always
 RestartSec=3

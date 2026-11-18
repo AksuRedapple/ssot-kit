@@ -11,7 +11,27 @@
 import argparse, glob, json, os, sqlite3, sys
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
-DB = os.path.join(SSOT, 'S2-index/semantic/index.db')
+SEM = os.path.join(SSOT, 'S2-index', 'semantic')
+
+
+def resolve_db():
+    """版本化布局优先：active.json → versions/<v>/index.db；否则回退 legacy 单库。
+
+    2026-11-18：修复 --full/--adopt 后仍读根 index.db，导致「已索引」恒为 0
+    （根库已移入 versions/，覆盖审计却还在看旧路径）。
+    """
+    try:
+        with open(os.path.join(SEM, 'active.json'), encoding='utf-8') as f:
+            v = json.load(f).get('version')
+        p = os.path.join(SEM, 'versions', str(v), 'index.db')
+        if v and os.path.exists(p):
+            return p
+    except Exception:
+        pass
+    return os.path.join(SEM, 'index.db')
+
+
+DB = resolve_db()
 HOME = os.path.expanduser('~')
 
 # 已接入的源: (名称, S0 原始目录, S1 目录)
@@ -184,7 +204,8 @@ def main():
     a = ap.parse_args()
     rows, pending = collect()
     if a.json:
-        print(json.dumps({'sources': rows, 'pending': pending}, ensure_ascii=False, indent=1))
+        print(json.dumps({'db': DB, 'sources': rows, 'pending': pending},
+                         ensure_ascii=False, indent=1))
         return 0
     rl = roles()
     print(f"{'源':10s}{'角色':6s}{'原始':>6s}{'S1':>6s}{'子':>4s}{'空壳':>6s}{'已索引':>8s}{'块':>9s}  状态")

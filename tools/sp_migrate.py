@@ -216,7 +216,9 @@ def main():
         return 0
 
     target = a.to or cur
-    todo = [s for s in STEPS if s['to'] <= target and s['id'] not in st['applied'] and not s['check']()]
+    # 已登记 applied 的步骤也要重查：迁移之后新进来的实例（如后装 harness 的 S1 产物）
+    # 仍可能漏字段，check() 不过就应允许补做（各步 apply 只做加法且幂等）。
+    todo = [s for s in STEPS if s['to'] <= target and not s['check']()]
     if not todo:
         print('已是最新,无需迁移'); return 0
 

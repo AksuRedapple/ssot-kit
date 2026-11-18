@@ -42,6 +42,11 @@ for f in "$KIT"/hooks/*.sh; do
   [ -e "$f" ] || continue
   [ "$DRY" = 1 ] || cp -f "$f" "$ROOT/tools/hooks/"
 done
+# 嵌入服务脚本不是 .py，单独同步（install-service.sh 依赖 $ROOT/tools/serve_embed.sh）
+if [ -f "$KIT/tools/serve_embed.sh" ]; then
+  [ "$DRY" = 1 ] || cp -f "$KIT/tools/serve_embed.sh" "$ROOT/tools/serve_embed.sh"
+  [ "$DRY" = 1 ] || chmod +x "$ROOT/tools/serve_embed.sh"
+fi
 echo "   工具: $(ls "$ROOT"/tools/*.py 2>/dev/null | wc -l | tr -d ' ') 个"
 
 # 模板只补缺

@@ -22,7 +22,7 @@
 | **薄壳编译** | 入口文件是**编译产物**：正本 → 极小的"指针+纪律"薄壳；索引层不要，细节按需拉（`tools/sp_compile.py`） |
 | **会话台账** | 一行一会话（登记册）+ 每业务线一页（含【续点】）；开工三问 / 收尾一行（`docs/SSMAP.md`） |
 | **知识库** | inbox（fact 带 source / decision 带 owner）→ 单向提纯进知识层（`docs/PROTOCOLS.md`） |
-| **语义检索（可选）** | 本地嵌入模型（EmbeddingGemma + llama.cpp），按意思搜，不出机（`docs/SEMANTIC.md`） |
+| **语义检索（可选）** | 本地嵌入模型（EmbeddingGemma + llama.cpp），按意思搜，不出机（`docs/SEMANTIC.md`）；索引未建时可用 `sp_recall.py` 按词兜底 |
 | **读侧自动化（可选）** | SessionStart 注入 / 回忆句式触发检索 / Stop 机械草稿 + 6h 值守；无 shell hook 的 harness 走扩展/插件（opencode、Pi）；把「应该做」降成结构（`docs/HOOKS.md`） |
 | **可信度与新鲜度** | inbox `conf: 实测/推断/待核`；薄壳/索引记 `built_at_commit`；`SSOT_REPORT.md` 冷启动单文件；断言编号 lint（只报不改号） |
 

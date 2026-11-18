@@ -35,6 +35,10 @@ for f in "$KIT"/hooks/*.sh; do
   [ -e "$f" ] || continue
   [ "$DRY" = 1 ] || cp -f "$f" "$ROOT/tools/hooks/"
 done
+if [ -f "$KIT/tools/serve_embed.sh" ]; then
+  [ "$DRY" = 1 ] || cp -f "$KIT/tools/serve_embed.sh" "$ROOT/tools/serve_embed.sh"
+  [ "$DRY" = 1 ] || chmod +x "$ROOT/tools/serve_embed.sh"
+fi
 echo "   框架件已同步"
 
 if [ -f "$KIT/tools/sp_migrate.py" ]; then

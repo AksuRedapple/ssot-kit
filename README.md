@@ -50,10 +50,11 @@ The system separates four lifetimes that are often mixed together:
 ## What is included
 
 - **Thin-shell compilation** — canonical sources compile into bounded agent entry files (`sp_compile.py`).
-- **Session conversion** — Claude Code, Codex-adjacent, OpenCode, DSH, Pi, and Qoder evidence adapters.
+- **Session capture and conversion** — discover harness sources, opt-in S0 archiving (hardlink-first), then convert to S1 for Claude Code, Codex-adjacent, OpenCode, DSH, Pi, and Qoder.
 - **Session lifecycle** — inventory, handoff, resumable registry entries, gates, and clean retirement (`scan_sessions.py`, `sp_handoff.py`).
 - **Candidate governance** — extraction, de-duplication, conflict detection, review, and one-way promotion.
-- **Semantic recall** — local embeddings with incremental indexing and versioned, atomically activated indexes.
+- **Semantic and keyword recall** — local embeddings with versioned activation, plus an index-free keyword fallback (`sp_recall.py`).
+- **Conservative embedding autotune** — read-only probe/benchmark writes a machine profile; client workers stay at 1 unless a grid proves otherwise.
 - **Read-side automation** — session-start injection, recall hooks, draft capture, and a 6-hour steward.
 - **Installation and update rails** — isolated setup, upgrade, migration, and preflight tests.
 

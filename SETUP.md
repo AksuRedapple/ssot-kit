@@ -59,8 +59,25 @@ python3 ~/ssot/tools/sp_compile.py --mem --deploy
 ```
 → 把 `~/ssot` 正本编译成 agent 记忆薄壳（`~/.qoder/memory/MEMORY.md`）。前版自动备份到 `~/ssot/compile/`。
 
+### 6b. 会话采集（可选，但语义层要靠它）
+
+> 不采集时，语义索引只有 `lines/knowledge/inbox` 的知识层；问「上次讨论过什么」只能靠 grep。
+
+```bash
+python3 ~/ssot/tools/sp_sources.py          # 只读：真源里有几个会话
+python3 ~/ssot/tools/sp_archive.py --apply  # 归档（默认 dry-run；同卷 hardlink）
+python3 ~/ssot/tools/sp_convert.py --src cc --incremental      # 按实际 harness 选
+python3 ~/ssot/tools/sp_opencode.py --limit 200                 # OpenCode 走 sqlite
+python3 ~/ssot/tools/sp_coverage.py         # 原始 / S1 / 已索引 三数对账
+```
+
+`sp_coverage` 的「原始」分母来自 S0 归档；要看 harness 真源，用 `sp_sources`。
+`evidence/` 含会话原文，视同个人数据，不要提交到公开仓。
+
 ### 7. （可选）语义检索层
 按 `docs/SEMANTIC.md`：拉本地嵌入模型 → 起服务 → 建索引。
+配置想按机器自适应，先跑 `python3 ~/ssot/tools/sp_embed_autotune.py --probe`；
+确认后再 `--bench --quick --apply`，重启服务生效（默认 workers=1，不做并发假设）。
 
 ### 8. （可选）读侧唤起 + 6h 值守
 ```bash

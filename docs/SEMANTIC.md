@@ -85,6 +85,31 @@ sleep 3 && curl -s http://127.0.0.1:8399/health   # → {"status":"ok"}
 若 `llama-server` 不在 PATH，用 `LLAMA_SERVER=/path/to/llama-server` 指定。
 **常驻**（可选，推荐）：`bash scripts/install-service.sh`——见 §六（在系统件仓库根执行，仓库位置见 `~/ssot/profile/.kit-path`）。
 
+## 三·五、配置自适应（可选，保守版）
+
+默认配置写死在 `serve_embed.sh`，但会优先读 `profile/embed-profile.json`（`EMBED_C/B/UB/PARALLEL` 可覆盖）。建议流程：
+
+```bash
+# 1) 只读探测：硬件 / 模型 / 当前服务 / 建议值（不写盘、不重启）
+python3 ~/ssot/tools/sp_embed_autotune.py --probe
+
+# 2) 只读基准：当前端口上测 batch × workers（不写索引）
+python3 ~/ssot/tools/sp_embed_bench.py --quick
+
+# 3) 写 profile（只写 profile，不改服务；下次启动生效）
+python3 ~/ssot/tools/sp_embed_autotune.py --bench --quick --apply
+
+# 4) 重启（按你的安装方式二选一）
+bash ~/ssot/tools/serve_embed.sh
+launchctl kickstart -k "gui/$(id -u)/com.ssot.embed"
+```
+
+- **workers 默认 1**：同机 8 路并发实测为负收益（139→124 块/秒）；并发只作为 opt-in 网格，不假设线性扩展。
+- 想测隔离配置，先在 8398 起临时服务，再 `--port 8398 --bench`；不要用 autotune 重启 8399，也不要让它碰 active 索引。
+- `--restore` 可回滚 `profile/embed-profile.json.bak`。
+- 缓存键含硬件、模型、llama-server 版本；换机器/换模型后重新跑一次。
+- profile 含本机模型绝对路径与硬件信息，属机器本地配置；不要提交到公开仓。
+
 ## 四、建索引 + 检索
 
 ```bash

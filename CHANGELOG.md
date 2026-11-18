@@ -6,6 +6,24 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.14.0] - 2026-11-18 — 会话层采集闭环与体检读数修复
+
+- **fix(sp_coverage)**: 版本化索引后优先读 `active.json → versions/<v>/index.db`，不再恒报「已索引 0」；legacy 单库仍可回退
+- **fix(ssot_check)**: `[build]` 跟随 active 版本 BUILD，不再显示迁移前的块数与时间；完成态汇总覆盖缺口/死路径/索引落后；死路径摘要带线页名与行号
+- **feat(sp_sources)**: 新增会话源发现层（Qoder 双根 + App 主库、CC、DSH、Pi、Codex、OpenCode），覆盖审计不再拿归档当分母
+- **feat(sp_archive)**: 新增 opt-in S0 归档：默认 dry-run、同卷 hardlink、跨卷 copy、`--settle` 跳写中文件、manifest 留痕
+- **feat(sp_recall)**: 新增不依赖索引的关键词兜底检索；S1 默认、`--raw` 查 S0（输出前脱敏）、`--live` 查 harness 真源
+- **feat(sp_drafts)**: 新增草稿清单与 registry 候选行生成（只读，不自动转正）
+- **fix(recall)**: 补齐「历史对话/对话记录/查历史/之前用过」等真实问法，hook 与 Pi 插件内嵌 fallback 同步
+- **fix(serve_embed)**: setup/update 现在会把 `serve_embed.sh` 安装到实例；脚本优先读 `profile/embed-profile.json`，环境变量可覆盖，增加 `EMBED_CONFIG_DRY` 与上下文/批大小硬约束
+- **feat(embed)**: 新增只读基准 `sp_embed_bench.py`（batch×workers，不写索引、不重启服务）与保守版 `sp_embed_autotune.py`（探测/基准/写 profile/回滚；不自动重启）
+- **feat(sp_index)**: 从 profile 读 `client.batch`（`SP_INDEX_BATCH` 可覆盖），`--status` 显示 config，`BUILD.json` 记录 config 与吞吐
+- **perf(embed)**: `workers` 默认 1；同机 8 路并发实测为负收益（139→124 块/秒），并发仅作 opt-in 网格
+- **fix(sp_compile)**: `--claude` 改用正本内容哈希表头，源不变时重编译 0 diff；明确 `--mem` 是 MEMORY 薄壳、不要指向 CLAUDE.md
+- **fix(sp_handoff)**: 允许 4/5 段交接（第 5 段为跨载体扩展），C1 仍要求 1–4 段
+- **fix(sp_migrate)**: 已登记 `applied` 的步骤也重查 `check()`，后装 harness 的产物仍可补字段（各步只做加法且幂等）
+- **test**: 新增版本化覆盖/构建读数、源发现、归档幂等/hardlink、recall 脱敏、草稿只读、触发词正反例、嵌入基准/autotune/profile 配置回归
+
 ## [0.13.2] - 2026-11-13 — 公开案例与组织治理连载
 
 - **docs**: 新增 `docs/CASE-STUDY.md`，把问题、设计原则、实现、连载证据、边界与验证收束为一个公开作品集入口

@@ -40,10 +40,22 @@ mkdir -p ~/ssot/tools/hooks && cp hooks/*.sh ~/ssot/tools/hooks/
 # 3) 体检（此时语义层还没建，相关行会显示 0/缺省，属正常）
 python3 ~/ssot/tools/ssot_check.py
 
+# 3.5) 会话采集（可选，但语义检索要靠它才有会话原文）
+#      先看真源有几个会话；确认后归档（默认 dry-run，加 --apply 才写）
+python3 ~/ssot/tools/sp_sources.py
+python3 ~/ssot/tools/sp_archive.py --apply
+
+#      归档 → S1 → 索引（按实际使用的 harness 选 --src）
+python3 ~/ssot/tools/sp_convert.py --src cc --incremental
+python3 ~/ssot/tools/sp_convert.py --src qoder --incremental
+python3 ~/ssot/tools/sp_opencode.py --limit 200
+
 # 4) 语义层（可选；需嵌入模型 + 常驻服务）
 #    模型与启动方式见 docs/SEMANTIC.md
 python3 ~/ssot/tools/sp_index.py --incremental
 ```
+
+> `evidence/` 里是会话原文，视同个人数据；不要提交到公开仓，也不要把 `SSOT_REPORT.md` 之类的体检产物原样外发。
 
 ## 三条可用性验证
 

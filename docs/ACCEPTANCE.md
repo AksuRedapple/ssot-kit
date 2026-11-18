@@ -80,3 +80,21 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 
 我们的测试依赖上游本机数据（`~/ssot/evidence`、私有语料、索引），随包既跑不通也泄路径。
 所以随包的是：**冒烟测试（可复现）+ 本文件的意图与判据**；全量测试留在上游。
+
+## 9 会话层闭环（v0.14.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 新装实例能把 harness 真源采进来，语义/关键词都能命中会话原文；覆盖审计不再拿归档当分母 |
+| 步骤 | `sp_sources.py` → `sp_archive.py --apply` → `sp_convert.py --src <h> --incremental` → `sp_coverage.py` → `sp_recall.py "<词>"` |
+| 判据 | ① `sp_sources` 有非零会话 ② 归档后 `sp_archive` 二次运行 0 新增（同卷 hardlink） ③ `sp_coverage` 的 covered 与 S1 对账 ④ `sp_recall` 不依赖索引能命中 |
+| 反例 | 只看 `sp_coverage` 的「原始」列就宣称采全（分母是归档本身）→ FAIL；`sp_recall` 读 S0 输出未脱敏 → FAIL |
+
+## 10 嵌入配置（v0.14.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 配置可按机器落在 profile；启动/索引/观测都能消费；不自动重启、不默认并发 |
+| 步骤 | `sp_embed_autotune.py --probe` → `--bench --quick --apply` → `EMBED_CONFIG_DRY=1 bash tools/serve_embed.sh` → `sp_index.py --status` |
+| 判据 | ① dry-run 的 `-c/-b/-ub/--parallel` 与 profile 一致 ② `sp_index --status` 显示 `batch=…(profile)` ③ `BUILD.json` 含 `config` ④ workers 默认 1（无 >5% 收益不采纳并发） |
+| 反例 | `install-service.sh` 用 `$ROOT/models/...` 覆盖 profile 的真实模型路径 → FAIL；把 48GB 机器的 `workers=8` 当默认 → FAIL |

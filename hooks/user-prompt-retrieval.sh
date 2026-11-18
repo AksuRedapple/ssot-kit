@@ -20,7 +20,7 @@ except Exception:
 
 # 保守触发词：只认明确的回忆/取证句式，防日常词误触。
 # 单一真源：$ROOT/tools/recall-phrases.json（缺失时用内嵌 fallback）。
-RX="还记得|记得吗|以前(说|提|做|那个|我们|的)|上次(说|提|做|讨论|那个|的)|之前(说|提|做|讨论|那个|提到|的)|早先|前面说过|回顾一下|找一找.*(之前|以前|历史|那个)|(之前|以前)的(会话|记录|讨论)|那时候我们|当时我们|历史(会话|记录|里)"
+RX="还记得|记得吗|以前(说|提|做|那个|我们|的)|上次(说|提|做|讨论|那个|的)|之前(说|提|做|讨论|那个|提到|用过|的)|早先|前面说过|回顾一下|找一找.*(之前|以前|历史|那个)|(之前|以前)的(会话|记录|讨论)|那时候我们|当时我们|历史(会话|记录|里|对话)|对话记录|查.*历史|有没有.*(会话|对话|历史).*记录"
 PHRASES="$ROOT/tools/recall-phrases.json"
 if [ -f "$PHRASES" ]; then
   LOADED=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("regex",""))' "$PHRASES" 2>>"$ROOT/alerts/hook.err")

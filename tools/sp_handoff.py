@@ -103,8 +103,10 @@ def check(a=None):
     txt = open(p, encoding='utf-8').read()
     secs = re.findall(r'^## (\d) ', txt, re.M)
     ok = True
-    print(f'四段:{len(secs)} 段 {"✅" if len(secs) == 4 else "❌"}')
-    ok &= len(secs) == 4
+    # 第 5 段是跨载体/跨 agent 的合法扩展；C1 只要求 1-4，不禁止 5。
+    valid_sections = set(secs) >= {'1', '2', '3', '4'} and len(secs) in (4, 5)
+    print(f'四段:{len(secs)} 段 {"✅" if valid_sections else "❌"}')
+    ok &= valid_sections
     body2 = re.search(r'## 2 .*?(?=\n## 3|$)', txt, re.S)
     n_src = len(re.findall(r'source:', body2.group(0))) if body2 else 0
     print(f'事实带出处:{n_src} 条 {"✅" if n_src >= 1 else "❌"}')

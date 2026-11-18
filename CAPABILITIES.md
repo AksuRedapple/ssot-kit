@@ -1,4 +1,4 @@
-# kit 能力清单（v0.13.2 · 2026-11-13）
+# kit 能力清单（v0.14.0 · 2026-11-18）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -23,6 +23,13 @@
 | `sp_dispatch.py` | 开局上下文（预算分级） | `python3 tools/sp_dispatch.py --level pointer` |
 | `sp_handoff.py` | 收工交接四段 + 检查 | `python3 tools/sp_handoff.py --check` |
 | `sp_coverage.py` | 覆盖审计（原始/转录/索引缺口；OpenCode 分母=v2 根+legacy-only 根） | `python3 tools/sp_coverage.py` |
+| `sp_sources.py` | 会话源发现（harness 真源；覆盖审计的分母，不拿归档自证） | `python3 tools/sp_sources.py` |
+| `sp_archive.py` | S0 归档（opt-in；默认 dry-run，同卷 hardlink，跨卷 copy） | `python3 tools/sp_archive.py --apply` |
+| `sp_recall.py` | 关键词兜底检索（不依赖索引；S1/S0/live 三层，输出脱敏） | `python3 tools/sp_recall.py "<关键词>" --raw` |
+| `sp_drafts.py` | 收尾草稿 → registry 候选行（只读，不自动转正） | `python3 tools/sp_drafts.py --list` |
+| `sp_embed_bench.py` | 嵌入吞吐基准（只读，不写索引/不重启服务） | `python3 tools/sp_embed_bench.py --quick` |
+| `sp_embed_autotune.py` | 探测 + 基准 → `profile/embed-profile.json`（不自动重启） | `python3 tools/sp_embed_autotune.py --bench --quick --apply` |
+| `serve_embed.sh` | 嵌入服务启动；读 profile，env 可覆盖 | `EMBED_CONFIG_DRY=1 bash tools/serve_embed.sh` |
 | `sp_takeover_lint.py` | 线页接手面四规则自检 | `python3 tools/sp_takeover_lint.py` |
 | `sp_line_status.py` | 线页「现在时」状态行派生 | `python3 tools/sp_line_status.py --apply` |
 | `sp_bootstrap.py` | 全量 dump 编排（发现→转换→建库→抽取） | `python3 tools/sp_bootstrap.py --plan` |
