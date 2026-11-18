@@ -143,3 +143,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `sp_assert_audit.py` → `sp_assert_meta.py --apply` → `sp_index.py --incremental` → `sp_semantic.py "<断言话题>"` |
 | 判据 | ① chunks 有 assertion_id/status/superseded_by ② vacant 不入索引 ③ active 优先、superseded 排后并标注 ④ `sp_supersede --propose/--confirm` 只写事件/meta |
 | 反例 | 把 700 字混合块整体标 superseded → FAIL；自动改 Markdown 正本 → FAIL |
+
+## 16 P4 检索命中数据收集（v0.16.1）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 记录 top-k 命中源，为“长期零命中”退休候选提供数据；不自动删 |
+| 步骤 | `sp_semantic.py "<查询>"` → 查 `S2-index/search-log.jsonl` → `sp_retire_candidates.py --days 180` |
+| 判据 | ① 日志含 `topk_paths/topk_sids`（cap 20） ② `--no-log` 不写 ③ 候选排除 retired/policy 跳过 ④ 低日志/低覆盖标记 low_confidence ⑤ 只读不删 |
+| 反例 | 零命中直接自动 `sp_exit` → FAIL；日志写入正文/查询原文未脱敏 → FAIL |

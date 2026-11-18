@@ -61,6 +61,8 @@ AUTO_SEMANTIC_EXPAND = False    # 调参集消融：开启无净增益、p50 +35
 
 def log_call(tool, query, n, top1, ms, status='ok', extra=None):
     """调用留痕（本地 JSONL；查询脱敏截断；日志失败绝不影响检索）。"""
+    if os.environ.get('SSOT_NO_LOG') == '1':
+        return
     try:
         os.makedirs(os.path.dirname(LOG), exist_ok=True)
         rec = {
@@ -845,6 +847,8 @@ def main():
     ap.add_argument('--path', default=None, help='路径子串过滤，如 lines / S1-sessions')
     ap.add_argument('--role', default=None, help='角色过滤：user / assistant（S1 块）')
     ap.add_argument('--active-only', action='store_true', help='隐藏 superseded/refuted 断言块')
+    ap.add_argument('--no-log', action='store_true', help='本次查询不写 search-log（敏感查询）')
+    ap.add_argument('--log-topk', type=int, default=20, help='search-log 记录 top-k 数量（默认 20，cap 100）')
     ap.add_argument('--expand', action='store_true',
                     help='查询扩展：按 sp_synonyms.json 别名组多变体融合（+2~3s）')
     ap.add_argument('--mode', choices=('dense', 'hybrid', 'hybrid2', 'canonical_hybrid', 'canonical', 'lines', 'onboard', 'guide', 'auto', 'route', 'route2', 'route3', 'hybrid2d'),
@@ -873,6 +877,8 @@ def main():
 
     if not a.query:
         sys.exit(__doc__)
+    if a.no_log:
+        os.environ['SSOT_NO_LOG'] = '1'
     t0 = time.time()
     results = meta = None
     if (not a.oneshot) and os.environ.get('SSOT_SEMANTIC_ONESHOT') != '1' and os.path.exists(SOCK_PATH):
@@ -907,6 +913,17 @@ def main():
         sys.exit(f'检索失败：{msg}')
 
     results = order_results(results, active_only=a.active_only)
+    cap = max(1, min(int(a.log_topk or 20), 100))
+    topk_paths, topk_sids = [], []
+    for r in results:
+        p = r.get('path') or ''
+        if p and p not in topk_paths:
+            topk_paths.append(p)
+        sid = sid_from_path(p)
+        if sid and sid not in topk_sids:
+            topk_sids.append(sid)
+        if len(topk_paths) >= cap:
+            break
     variants = meta['variants']
     ext = (f' · 扩展 {len(variants)} 变体（' + '｜'.join(t for _v, t in variants) + '）') if variants else ''
     print(f"query: {a.query}  （库 {meta['N']} 块 · commit {build_commit()} · 编码 {meta['t_enc']:.0f}ms + 载入 {meta['t_load']:.0f}ms + 检索 {meta['t_calc']:.0f}ms{ext}）\n")
@@ -923,7 +940,8 @@ def main():
         print(f'        {snippet}')
     top1 = (results[0]['path'], results[0]['line'], results[0]['score']) if results else None
     log_call('sp_semantic', a.query, len(results), top1, (time.time() - t0) * 1000,
-             extra={'k': a.top, 'expand': bool(variants), 'path': a.path, 'role': a.role})
+             extra={'k': a.top, 'expand': bool(variants), 'path': a.path, 'role': a.role,
+                    'topk_paths': topk_paths[:cap], 'topk_sids': topk_sids[:cap]})
 
 
 if __name__ == '__main__':

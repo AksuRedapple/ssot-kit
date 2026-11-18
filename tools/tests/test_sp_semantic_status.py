@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """回归：fetch_rows 读 status/superseded_by；旧库缺列不崩。"""
+import os
 import sqlite3
 import sys
 import tempfile
@@ -47,6 +48,24 @@ def main():
     got = [r['path'] for r in sp_semantic.order_results(rs, active_only=True)]
     if got != ['b', 'c']:
         fails.append(f"active_only 不对: {got}")
+
+    # log_call: topk 写入 / --no-log 短路
+    import json as _json
+    with tempfile.TemporaryDirectory() as td:
+        old_log = sp_semantic.LOG
+        sp_semantic.LOG = str(Path(td) / "log.jsonl")
+        sp_semantic.log_call("sp_semantic", "q", 2, ("a", 1, 0.9), 10,
+                             extra={"topk_paths": ["a", "b"], "topk_sids": ["11111111"]})
+        line = _json.loads(open(sp_semantic.LOG, encoding="utf-8").read().splitlines()[-1])
+        if line.get("topk_sids") != ["11111111"]:
+            fails.append(f"topk 日志不对: {line}")
+        os.environ["SSOT_NO_LOG"] = "1"
+        sp_semantic.log_call("sp_semantic", "q2", 0, None, 1)
+        n2 = len(open(sp_semantic.LOG, encoding="utf-8").read().splitlines())
+        os.environ.pop("SSOT_NO_LOG", None)
+        if n2 != 1:
+            fails.append(f"--no-log 仍写: {n2}")
+        sp_semantic.LOG = old_log
 
     if fails:
         for f in fails:

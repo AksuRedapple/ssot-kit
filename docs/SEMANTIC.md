@@ -221,6 +221,18 @@ python3 tools/sp_s0scan.py --write-state
 - `evidence/` 视同敏感层：`tmutil addexclusion ~/ssot/evidence`（或同步工具排除）；不要提交到公开仓。
 - 只想验某个源：`sp_s0scan.py --only pi`（只报该 harness 的计数/路径）。
 
+## 五·六、P4 退休候选（只读）
+
+```bash
+python3 tools/sp_semantic.py "<查询>"          # 自动记 topk_paths/topk_sids（cap 20）
+python3 tools/sp_semantic.py "<敏感查询>" --no-log   # 本次不写日志
+python3 tools/sp_retire_candidates.py --days 180    # 零命中候选，只报告
+```
+
+- 日志在 `S2-index/search-log.jsonl`（本机 600 权限）；只记路径/sid，不记正文。
+- 零命中 ≠ 无价值；报告只作候选，人工确认后走 `sp_exit.py`。
+- 不做全局 TTL；P4 只解决“看得到哪些源长期没被检索”。
+
 ## 五·五、索引生命周期（分类与退出，v0.15 候选）
 
 **分类摄入（opt-in）**

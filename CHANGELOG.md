@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.16.1] - 2026-11-19 — P4 检索命中数据收集
+
+- **feat(p4)**: `sp_semantic` search-log 增 `topk_paths/topk_sids`（cap 20）与 `--no-log` 敏感查询开关；新增只读 `sp_retire_candidates.py --days 180`（零命中候选，不自动删）
+
 ## [0.16.0] - 2026-11-19 — S0 敏感层、环境指纹与断言状态
 
 - **feat(archive)**: `sp_archive --scrub` 支持 S0 归档 copy-on-write 脱敏（源文件字节不变、二进制/超大跳过、manifest 记 sensitivity/scrubbed/redactions/source_sha）；`--rescrub` 强制重写
