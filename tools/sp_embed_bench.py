@@ -25,6 +25,9 @@ import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sp_fingerprint  # noqa: E402
+
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SECRET_RX = re.compile(
     r'(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}'
@@ -214,6 +217,7 @@ def main():
     best = max(ok, key=lambda r: (r['throughput'], -r['workers'])) if ok else None
     out = {'port': a.port, 'chunks': len(texts), 'reps': max(1, a.reps),
            'corpus': a.corpus or 'S1-sample', 'rows': rows, 'best': best,
+           'env': sp_fingerprint.env(),
            'at': time.strftime('%Y-%m-%dT%H:%M:%S%z')}
     if a.json_out:
         with open(a.json_out, 'w', encoding='utf-8') as f:

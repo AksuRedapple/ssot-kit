@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.16.0] - 2026-11-19 — S0 敏感层、环境指纹与断言状态
+
+- **feat(archive)**: `sp_archive --scrub` 支持 S0 归档 copy-on-write 脱敏（源文件字节不变、二进制/超大跳过、manifest 记 sensitivity/scrubbed/redactions/source_sha）；`--rescrub` 强制重写
+- **feat(archive)**: 新增 `sp_s0scan.py`（S0 密钥形态巡检，只报计数/路径）；steward 每周扫描，`ssot_check [archive]` 展示
+- **docs**: S0 敏感层、Time Machine/同步排除、scrub 的不可逆与磁盘成本说明
+- **feat(fingerprint)**: 新增 `sp_fingerprint.py`（hardware/model/llama/backend 单一实现）；`sp_embed_bench` 输出 env；`BUILD.json` 记 model_fp/llama_version/backend；`sp_index --status` 只把 `model_fp` 当硬键（硬件/后端/llama 变化只标 soft，不触发重建）
+- **feat(assert-audit)**: 新增只读 `sp_assert_audit.py`（状态/重复/断号/断链/环/引用/切块成本），为 P2 assertion 级切块与 supersede 做数据体检
+- **feat(assert-meta)**: 新增 `sp_assert_lib/sp_assert_meta/sp_supersede`；机器状态放 `knowledge/assertions.meta.json` sidecar（不改 Markdown 正本）
+- **feat(index)**: assertions 改为“一条 `## A` 一块”（长块二次切分）；`chunks` 增 `assertion_id/status/superseded_by`，旧库自动 ALTER；`sp_index_merge` 兼容旧分片
+- **feat(semantic)**: `sp_semantic` 结果带 assertion_id/status/superseded_by；active/unknown 优先、superseded 排后并标注，`--active-only` 可隐藏
+
 ## [0.15.0] - 2026-11-18 — 索引生命周期、退出验收与 golden 回归
 
 - **feat(lifecycle)**: 新增 `sp_classify.py`（session_class 规则/backfill/手工覆盖）与 `profile/index-policy.json`；`sp_index --plan/--all-classes/--class/--apply-policy` 按类过滤，`BUILD.json` 记 policy/skipped

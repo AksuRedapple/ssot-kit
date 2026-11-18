@@ -116,3 +116,30 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `sp_exit.py --make-manifest` → `--retire --apply` → `--verify` → `sp_golden.py --check` |
 | 判据 | ① verify 按 sid 报 blocks=0 且 retired=true ② 重复 retire 无新日志 ③ `sp_index --incremental` 不复活 ④ S0/S1 仍在 ⑤ `logs/index-ops.jsonl` 有记录 |
 | 反例 | 只看总块数变化就宣称退出成功 → FAIL；删掉 S1/S0 才能退出 → FAIL（退出只删索引） |
+
+## 13 S0 敏感层（v0.16 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 承认“索引干净 ≠ 归档干净”；默认保留原文，可选 copy-on-write 脱敏 |
+| 步骤 | `sp_archive.py --scrub --dry --only <h>` → `--scrub --apply --only <h>` → `sp_s0scan.py --only <h>` |
+| 判据 | ① 源文件 sha256 不变 ② 目标含 `[REDACTED-SECRET]` 且不再是 hardlink ③ manifest 记 `sensitivity:high/scrubbed/redactions/src_sha` ④ 复扫 0 命中 |
+| 反例 | 对 hardlink dest 原地写导致源被改 → FAIL；`--scrub` 默认开启 → FAIL |
+
+## 14 环境指纹（v0.16 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 只把 `model_fp` 当硬键；硬件/backend/llama 变化只影响性能，不失效向量 |
+| 步骤 | `sp_embed_bench.py --quick --json` → `sp_index.py --status` |
+| 判据 | ① bench 输出 hardware/model/llama/backend ② status 有 `model:[hard]` 与 `env:[soft]` ③ model_fp 不一致才提示 `--full` |
+| 反例 | 8GB→16GB 因 hardware_fp 变化就要求全量重建 → FAIL |
+
+## 15 断言状态/取代（v0.16 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 断言一条一块；状态 sidecar；superseded 可见但不硬屏蔽 |
+| 步骤 | `sp_assert_audit.py` → `sp_assert_meta.py --apply` → `sp_index.py --incremental` → `sp_semantic.py "<断言话题>"` |
+| 判据 | ① chunks 有 assertion_id/status/superseded_by ② vacant 不入索引 ③ active 优先、superseded 排后并标注 ④ `sp_supersede --propose/--confirm` 只写事件/meta |
+| 反例 | 把 700 字混合块整体标 superseded → FAIL；自动改 Markdown 正本 → FAIL |

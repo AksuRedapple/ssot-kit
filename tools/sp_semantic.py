@@ -260,11 +260,28 @@ def fetch_rows(ids_list, db=DB):
         return out
     con = sqlite3.connect(db)
     q = ','.join('?' * len(ids_list))
-    for rid, path, line, text, role, ts in con.execute(
-            f'select id, path, line, text, role, ts from chunks where id in ({q})', ids_list):
-        out[rid] = (path, line, text, role, ts)
+    try:
+        rows = con.execute(
+            f'select id, path, line, text, role, ts, assertion_id, status, superseded_by '
+            f'from chunks where id in ({q})', ids_list).fetchall()
+    except sqlite3.OperationalError:
+        # 旧库未迁移：字段缺失时补 NULL，检索不失败
+        rows = [(r[0], r[1], r[2], r[3], r[4], r[5], None, None, None)
+                for r in con.execute(f'select id, path, line, text, role, ts from chunks where id in ({q})',
+                                     ids_list).fetchall()]
+    for rid, path, line, text, role, ts, aid, st, sup in rows:
+        out[rid] = (path, line, text, role, ts, aid, st, sup)
     con.close()
     return out
+
+
+def order_results(results, active_only=False):
+    """active/unknown 优先；superseded 保留但排后（混合块不硬屏蔽）。"""
+    if active_only:
+        results = [r for r in results if r.get('status') not in ('superseded', 'refuted')]
+    results.sort(key=lambda r: (0 if r.get('status') in (None, 'active', 'unknown') else 1,
+                                -float(r.get('score') or 0)))
+    return results
 
 
 def embed(text):
@@ -541,13 +558,14 @@ def run_search(query, top=8, path=None, role=None, expand=False, mode='dense'):
             d = detail.get(rid)
             if not d:
                 continue
-            p, line, text, r, _ts = d
+            p, line, text, r, _ts, aid, st, sup = d
             if path and path not in p:
                 continue
             if role and r != role:
                 continue
             results.append({'score': float(s), 'path': p, 'line': line,
-                            'text': text or '', 'role': r})
+                            'text': text or '', 'role': r,
+                            'assertion_id': aid, 'status': st, 'superseded_by': sup})
             shown += 1
             if shown >= top:
                 break
@@ -589,12 +607,13 @@ def run_search_by_vec(vec, top=8, path=None, role=None):
             d = detail.get(rid)
             if not d:
                 continue
-            p, line, text, r, _ts = d
+            p, line, text, r, _ts, aid, st, sup = d
             if path and path not in p:
                 continue
             if role and r != role:
                 continue
-            results.append({'score': float(sc), 'path': p, 'line': line, 'text': text or '', 'role': r})
+            results.append({'score': float(sc), 'path': p, 'line': line, 'text': text or '', 'role': r,
+                            'assertion_id': aid, 'status': st, 'superseded_by': sup})
             shown += 1
             if shown >= top:
                 break
@@ -825,6 +844,7 @@ def main():
     ap.add_argument('--top', type=int, default=8)
     ap.add_argument('--path', default=None, help='路径子串过滤，如 lines / S1-sessions')
     ap.add_argument('--role', default=None, help='角色过滤：user / assistant（S1 块）')
+    ap.add_argument('--active-only', action='store_true', help='隐藏 superseded/refuted 断言块')
     ap.add_argument('--expand', action='store_true',
                     help='查询扩展：按 sp_synonyms.json 别名组多变体融合（+2~3s）')
     ap.add_argument('--mode', choices=('dense', 'hybrid', 'hybrid2', 'canonical_hybrid', 'canonical', 'lines', 'onboard', 'guide', 'auto', 'route', 'route2', 'route3', 'hybrid2d'),
@@ -886,11 +906,18 @@ def main():
             sys.exit('FTS 索引缺失——先跑 python3 tools/sp_index.py --fts-only')
         sys.exit(f'检索失败：{msg}')
 
+    results = order_results(results, active_only=a.active_only)
     variants = meta['variants']
     ext = (f' · 扩展 {len(variants)} 变体（' + '｜'.join(t for _v, t in variants) + '）') if variants else ''
     print(f"query: {a.query}  （库 {meta['N']} 块 · commit {build_commit()} · 编码 {meta['t_enc']:.0f}ms + 载入 {meta['t_load']:.0f}ms + 检索 {meta['t_calc']:.0f}ms{ext}）\n")
     for r in results:
         rr = f" · {r['role']}" if r['role'] else ''
+        if r.get('assertion_id'):
+            rr += f" · {r['assertion_id']}"
+        if r.get('status') == 'superseded':
+            rr += f" · ⚠ 已被 {r.get('superseded_by') or '?'} 取代"
+        elif r.get('status') in ('refuted', 'vacant'):
+            rr += f" · ⚠ {r['status']}"
         snippet = ' '.join((r['text'] or '').split())[:110]
         print(f"[{r['score']:.3f}] {r['path']}:{r['line']}{rr}")
         print(f'        {snippet}')

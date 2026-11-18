@@ -40,6 +40,8 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sp_policy  # noqa: E402
+import sp_fingerprint  # noqa: E402
+import sp_assert_lib  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
@@ -323,6 +325,12 @@ def write_build(preserve_policy=False):
     schema = contract_schema()
     if schema:
         data['schema'] = schema
+    try:
+        env = sp_fingerprint.env()
+        data.update({'model_fp': env['model_fp'], 'llama_version': env['llama_version'],
+                     'backend': env['backend'], 'hardware_fp': env['hardware_fp']})
+    except Exception:
+        pass
     if RUN_META:
         data['run'] = dict(RUN_META)
         sec = RUN_META.get('seconds') or 0
@@ -351,7 +359,7 @@ def file_corpus_files():
     fs += sorted(glob.glob(os.path.join(SSOT, 'knowledge', 'topics', '*.md')))
     fs += [os.path.join(SSOT, 'sessions', 'registry.md')]
     fs += sorted(glob.glob(os.path.join(SSOT, 'inbox', '*.md')))
-    return [f for f in fs if os.path.isfile(f)]
+    return [f for f in fs if os.path.isfile(f) and os.path.abspath(f) != os.path.abspath(ASSERT)]
 
 
 def chunk_file(path, target=700, hard=1400):
@@ -374,6 +382,54 @@ def chunk_file(path, target=700, hard=1400):
         if t.strip():
             out.append((s, t, '', ''))
     return out
+
+
+def _assert_meta():
+    try:
+        d = json.load(open(ASSERT_META_PATH, encoding='utf-8'))
+        return d.get('entries') or {}
+    except Exception:
+        return {}
+
+
+def assertion_groups():
+    """assertions.md：一条 ## A 一块（超 1400 字二次切），附带 status/superseded_by。"""
+    import hashlib
+    blocks = sp_assert_lib.parse(ASSERT)
+    if not blocks:
+        return []
+    meta = _assert_meta()
+    rel = os.path.relpath(ASSERT, SSOT)
+    rows = []
+    counts = {}
+    for b in blocks:
+        m = meta.get(b['id']) or {}
+        status = str(m.get('status') or b.get('status') or 'unknown')
+        sup = m.get('superseded_by') or b.get('superseded_by') or None
+        counts[status] = counts.get(status, 0) + 1
+        if status == 'vacant':
+            continue
+        text = b['text']
+        parts = []
+        if len(text) <= 1400:
+            parts = [text]
+        else:
+            for i in range(0, len(text), 1400):
+                p = text[i:i + 1400]
+                if i:
+                    p = f"[{b['id']} 续] " + p
+                parts.append(p)
+        ASSERT_META[(rel, b['line'])] = (b['id'], status, sup)
+        for p in parts:
+            rows.append((b['line'], p, 'assertion', ''))
+    if not rows:
+        return []
+    try:
+        mh = hashlib.md5(open(ASSERT_META_PATH, 'rb').read()).hexdigest()
+    except OSError:
+        mh = '-'
+    digest = S1VER + ':assert:' + md5_files(ASSERT) + ':' + mh
+    return [(rel, digest, rows)]
 
 
 def file_groups():
@@ -508,6 +564,11 @@ def sa_groups():
 
 
 POLICY_SKIPPED = []
+ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
+ASSERT_META_PATH = os.path.join(SSOT, 'knowledge', 'assertions.meta.json')
+ASSERT_META = {}
+ASSERT_STATUS = {}
+ASSERT_COUNTS = {}
 
 
 def filter_groups(groups, policy, retired, all_classes=False, only=None, include_retired=False):
@@ -575,15 +636,31 @@ def pack_norm(vec):
     return struct.pack(f'<{len(vec)}f', *[x / n for x in vec])
 
 
+def chunk_meta(path, line):
+    return ASSERT_META.get((path, line), (None, None, None))
+
+
+def ensure_assertion_columns(con):
+    try:
+        cols = {r[1] for r in con.execute('pragma table_info(chunks)').fetchall()}
+    except Exception:
+        return
+    for c in ('assertion_id', 'status', 'superseded_by'):
+        if c not in cols:
+            con.execute(f'alter table chunks add column {c} text')
+
+
 def embed_and_store(con, todo, blocks, t0):
+    ensure_assertion_columns(con)
     flat = [(g, r) for g in todo for r in blocks[g]]
     if flat:
         for i in range(0, len(flat), BATCH):
             batch = flat[i:i + BATCH]
             vecs = embed_batch([DOC_PREFIX + b[1][1] for b in batch])
             con.executemany(
-                'insert into chunks(path,line,text,role,ts,vec) values(?,?,?,?,?,?)',
-                [(b[0], b[1][0], b[1][1], b[1][2], b[1][3], pack_norm(v))
+                'insert into chunks(path,line,text,role,ts,vec,assertion_id,status,superseded_by) '
+                'values(?,?,?,?,?,?,?,?,?)',
+                [(b[0], b[1][0], b[1][1], b[1][2], b[1][3], pack_norm(v), *chunk_meta(b[0], b[1][0]))
                  for b, v in zip(batch, vecs)])
             con.commit()
             if (i // BATCH) % 25 == 0:
@@ -597,6 +674,7 @@ def embed_and_store_diff(con, todo, blocks, old_rows, t0):
     old_rows: {path: [(line,text,role,ts,vec)]}；行号变化不影响复用。
     返回 (embedded, reused)。
     """
+    ensure_assertion_columns(con)
     flat, reused_rows = [], []
     for g in todo:
         pool = {}
@@ -612,16 +690,18 @@ def embed_and_store_diff(con, todo, blocks, old_rows, t0):
                 flat.append((g, r))
     if reused_rows:
         con.executemany(
-            'insert into chunks(path,line,text,role,ts,vec) values(?,?,?,?,?,?)',
-            reused_rows)
+            'insert into chunks(path,line,text,role,ts,vec,assertion_id,status,superseded_by) '
+            'values(?,?,?,?,?,?,?,?,?)',
+            [(*r, *chunk_meta(r[0], r[1])) for r in reused_rows])
         con.commit()
     if flat:
         for i in range(0, len(flat), BATCH):
             batch = flat[i:i + BATCH]
             vecs = embed_batch([DOC_PREFIX + b[1][1] for b in batch])
             con.executemany(
-                'insert into chunks(path,line,text,role,ts,vec) values(?,?,?,?,?,?)',
-                [(b[0], b[1][0], b[1][1], b[1][2], b[1][3], pack_norm(v))
+                'insert into chunks(path,line,text,role,ts,vec,assertion_id,status,superseded_by) '
+                'values(?,?,?,?,?,?,?,?,?)',
+                [(b[0], b[1][0], b[1][1], b[1][2], b[1][3], pack_norm(v), *chunk_meta(b[0], b[1][0]))
                  for b, v in zip(batch, vecs)])
             con.commit()
             if (i // BATCH) % 25 == 0:
@@ -733,6 +813,18 @@ def main():
             BATCH, BATCH_SOURCE, WORKERS, WORKERS_SOURCE,
             PROFILE if os.path.exists(PROFILE) else '-'))
         print("policy: %s" % sp_policy.summary(POLICY, len(RETIRED)))
+        try:
+            env = sp_fingerprint.env()
+            mfp = env['model_fp']
+            bp = os.path.join(os.path.dirname(resolve_db()), 'BUILD.json')
+            b = json.load(open(bp, encoding='utf-8')) if os.path.exists(bp) else {}
+            old = b.get('model_fp')
+            print("model : fp=%s [hard]%s" % (
+                mfp, (f"  ⚠ changed (BUILD={old}) → 需 --full 重建" if old and old != mfp else '')))
+            print("env   : %s · %s · %s [soft: 只影响性能/bench，不失效向量]" % (
+                env['hardware_fp'], env['backend'], env['llama_version']))
+        except Exception:
+            pass
         if WORKERS > 1:
             print("note  : workers>1 仅登记，未启用（03 号负结果；默认 1）")
         for name, st, n, m in list_versions():
@@ -854,11 +946,12 @@ def main():
     include_retired = '--include-retired' in args
 
     CLASS_BY_REL.clear(); REASON_BY_REL.clear(); SID_BY_REL.clear()
-    CLASS_BY_DIR.clear(); SID_BY_DIR.clear()
+    CLASS_BY_DIR.clear(); SID_BY_DIR.clear(); ASSERT_META.clear()
     fg = file_groups()
+    ag = assertion_groups()
     sg = s1_groups()
     sas = sa_groups()
-    all_groups = fg + sg + sas
+    all_groups = fg + ag + sg + sas
     # policy 级跳过（不受 --class/--all-classes 影响；用于 --apply-policy 和观测）
     _, POLICY_SKIPPED = filter_groups(all_groups, POLICY, RETIRED, False, None, False)
     groups, SKIPPED = filter_groups(all_groups, POLICY, RETIRED,
@@ -947,7 +1040,7 @@ def main():
                 print(f'   - {p}', flush=True)
             sys.exit(2)
     total = sum(len(r) for r in blocks.values())
-    print(f'语料：{len(groups)} 源 / {total} 块（文件 {len(fg)} / 会话 {len(sg)} / 子agent {len(sas)}）', flush=True)
+    print(f'语料：{len(groups)} 源 / {total} 块（文件 {len(fg)} / 断言 {len(ag)} / 会话 {len(sg)} / 子agent {len(sas)}）', flush=True)
     os.makedirs(os.path.dirname(DB), exist_ok=True)
 
     if not inc:
@@ -957,7 +1050,8 @@ def main():
         con.execute('drop table if exists chunks_fts')
         con.execute('drop table if exists chunks')
         con.execute('create table chunks(id integer primary key, path text, line integer, '
-                    'text text, role text, ts text, vec blob)')
+                    'text text, role text, ts text, vec blob, '
+                    'assertion_id text, status text, superseded_by text)')
         con.execute('drop table if exists src_state')
         con.execute('create table src_state(path text primary key, digest text)')
         n = embed_and_store(con, [g[0] for g in groups], blocks, t0)
@@ -986,6 +1080,7 @@ def main():
     if not os.path.exists(DB):
         sys.exit('索引不存在——先跑全量（无 --incremental）')
     con = sqlite3.connect(DB, timeout=30)
+    ensure_assertion_columns(con)
     ensure_fts(con)                 # 已有表则建触发器；缺表则先重建
     db_m = os.path.getmtime(DB)   # 先取样（任何写操作都会顶新 DB mtime）
     if not con.execute("select name from sqlite_master where name='src_state'").fetchone():

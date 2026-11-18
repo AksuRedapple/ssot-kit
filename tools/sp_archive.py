@@ -12,17 +12,22 @@
   python3 tools/sp_archive.py --apply               # 归档（hardlink 优先）
   python3 tools/sp_archive.py --only cc --since 30d --apply
   python3 tools/sp_archive.py --copy --apply        # 强制实体复制（外置盘）
+  python3 tools/sp_archive.py --scrub --dry         # 预览：哪些 S0 文件含密钥形态
+  python3 tools/sp_archive.py --scrub --apply       # 归档时脱敏（copy-on-write，源不动）
 """
 import argparse
 import datetime
+import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sp_sources  # noqa: E402
+from sp_convert import scrub as scrub_text, SECRET_RX  # noqa: E402
 
 SSOT = sp_sources.SSOT
 MANIFEST = os.path.join(SSOT, 'logs', 'archive-manifest.jsonl')
@@ -59,7 +64,37 @@ def iter_root_files(root, settle, since):
             yield p, st, 'ready'
 
 
-def classify(src, dst, hardlink):
+def load_state():
+    """读 archive-manifest 最后一条 per-dst，用于判断 scrub 是否已做。"""
+    out = {}
+    try:
+        for line in open(MANIFEST, encoding='utf-8', errors='replace'):
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            if d.get('dst_path'):
+                out[d['dst_path']] = d
+    except OSError:
+        pass
+    return out
+
+
+def count_hits(path, limit_bytes=256 * 1024 * 1024):
+    try:
+        if os.path.getsize(path) > limit_bytes:
+            return None
+        data = open(path, 'rb').read()
+    except OSError:
+        return None
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError:
+        return None
+    return sum(len(rx.findall(text)) for rx, _rep in SECRET_RX)
+
+
+def classify(src, dst, hardlink, scrub=False, prev=None, rescan=False):
     try:
         sst = os.stat(src)
     except OSError:
@@ -70,6 +105,14 @@ def classify(src, dst, hardlink):
         dst_st = os.stat(dst)
     except OSError:
         return 'new', sst
+    if scrub:
+        p = (prev or {}).get(dst) or {}
+        if (not rescan and p.get('scrubbed') and
+                int(p.get('src_mtime') or 0) == int(sst.st_mtime) and
+                int(p.get('bytes') or -1) == sst.st_size):
+            return 'skip', sst
+        # 首次 scrub：即使 dest 与源同 inode/同 mtime，也要重写成脱敏副本
+        return 'update', sst
     same_inode = sst.st_ino == dst_st.st_ino and sst.st_dev == dst_st.st_dev
     if hardlink and same_inode:
         return 'skip', sst
@@ -95,12 +138,54 @@ def apply_one(src, dst, hardlink):
     return 'copy'
 
 
+def apply_scrub(src, dst, limit_bytes=256 * 1024 * 1024):
+    """copy-on-write 脱敏：先断 hardlink，再写 tmp；源文件不动。"""
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    try:
+        if os.path.getsize(src) > limit_bytes:
+            data = None
+            reason = 'too-large'
+        else:
+            data = open(src, 'rb').read()
+            reason = ''
+    except OSError:
+        data = None
+        reason = 'unreadable'
+    if data is None:
+        if os.path.lexists(dst):
+            os.unlink(dst)
+        shutil.copy2(src, dst)
+        return 'copy', 0, False, reason or 'unreadable', ''
+    src_sha = hashlib.sha256(data).hexdigest()
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError:
+        if os.path.lexists(dst):
+            os.unlink(dst)
+        shutil.copy2(src, dst)
+        return 'copy', 0, False, 'binary', src_sha
+    hits = sum(len(rx.findall(text)) for rx, _rep in SECRET_RX)
+    clean = scrub_text(text)
+    if os.path.lexists(dst):        # 断开 hardlink，绝不改源
+        os.unlink(dst)
+    tmp = dst + '.tmp'
+    with open(tmp, 'w', encoding='utf-8', newline='') as f:
+        f.write(clean)
+    shutil.copystat(src, tmp)
+    os.replace(tmp, dst)
+    return 'scrub', hits, True, '', src_sha
+
+
 def main():
     ap = argparse.ArgumentParser(
         epilog='示例:\n  sp_archive.py\n  sp_archive.py --apply',
         formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--apply', action='store_true', help='真正写入（默认 dry-run）')
+    ap.add_argument('--dry', action='store_true', help='只预览（默认；显式写法）')
     ap.add_argument('--copy', action='store_true', help='强制实体复制，不 hardlink')
+    ap.add_argument('--scrub', action='store_true',
+                    help='归档时按 S1 同规则脱敏（copy-on-write；源文件不动）')
+    ap.add_argument('--rescrub', action='store_true', help='已 scrubbed 的文件也重写一遍')
     ap.add_argument('--only', default='qoder,cc,dsh,pi',
                     help='逗号分隔的源（默认 qoder,cc,dsh,pi；codex 需显式）')
     ap.add_argument('--since', help='只归档最近变更，如 30d / 12h / 2w')
@@ -109,10 +194,12 @@ def main():
     a = ap.parse_args()
     only = set(x.strip() for x in a.only.split(',') if x.strip())
     since = sp_sources.parse_since(a.since)
-    hardlink = not a.copy
+    hardlink = not (a.copy or a.scrub)
+    prev = load_state()
 
     stats = {'seen': 0, 'new': 0, 'update': 0, 'skip': 0, 'settling': 0,
-             'link': 0, 'copy': 0, 'bytes_new': 0, 'roots': 0}
+             'link': 0, 'copy': 0, 'scrub': 0, 'redactions': 0,
+             'unscanned': 0, 'bytes_new': 0, 'roots': 0}
     records = []
 
     for src, role, kind, roots in sp_sources.ROOTS:
@@ -131,20 +218,41 @@ def main():
                 if state == 'settling':
                     stats['settling'] += 1
                     continue
-                action, sst = classify(p, dst, hardlink)
+                if a.scrub and not a.apply:
+                    hits = count_hits(p)
+                    records.append({'ts': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                                    'src': src, 'action': 'scrub-preview', 'mode': 'dry',
+                                    'bytes': st.st_size, 'src_mtime': int(st.st_mtime),
+                                    'src_path': p, 'dst_path': dst,
+                                    'sensitivity': 'high', 'scrubbed': False,
+                                    'redactions': hits if hits is not None else -1})
+                    continue
+                action, sst = classify(p, dst, hardlink, a.scrub, prev, a.rescrub)
                 if action in ('skip', 'missing'):
                     stats['skip'] += 1
                     continue
                 stats[action] += 1
-                mode = 'dry'
-                if a.apply:
-                    mode = apply_one(p, dst, hardlink)
+                rec = {'ts': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                       'src': src, 'action': action, 'mode': 'dry',
+                       'bytes': sst.st_size if sst else 0,
+                       'src_mtime': int(sst.st_mtime) if sst else 0,
+                       'src_path': p, 'dst_path': dst,
+                       'sensitivity': 'high', 'scrubbed': False,
+                       'redactions': 0, 'src_sha': '-'}
+                if a.apply and a.scrub:
+                    mode, hits, scrubbed, note, sha = apply_scrub(p, dst)
+                    rec.update({'mode': mode, 'scrubbed': scrubbed, 'redactions': hits,
+                                'src_sha': sha, 'note': note})
                     stats[mode] += 1
+                    stats['redactions'] += hits
+                    if not scrubbed:
+                        stats['unscanned'] += 1
                     stats['bytes_new'] += sst.st_size if sst else 0
-                records.append({'ts': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
-                                'src': src, 'action': action, 'mode': mode,
-                                'bytes': sst.st_size if sst else 0,
-                                'src_path': p, 'dst_path': dst})
+                elif a.apply:
+                    rec['mode'] = apply_one(p, dst, hardlink)
+                    stats[rec['mode']] += 1
+                    stats['bytes_new'] += sst.st_size if sst else 0
+                records.append(rec)
 
     if a.apply and records:
         os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
@@ -161,7 +269,13 @@ def main():
               f" · 更新 {stats['update']} · 跳过 {stats['skip']} · 写中 {stats['settling']}")
         if a.apply:
             print(f"  link {stats['link']} · copy {stats['copy']} · 新增字节 {stats['bytes_new']:,}")
+            if a.scrub:
+                print(f"  scrub {stats['scrub']} · 脱敏 {stats['redactions']} 处 · "
+                      f"未扫描/二进制 {stats['unscanned']}")
         else:
+            if a.scrub:
+                hits = [r for r in records if r.get('redactions', 0) > 0]
+                print(f"  scrub 预览：{len(hits)} 个文件命中；--apply 才写（copy-on-write）")
             print('  （未写入；确认后加 --apply）')
     return 0
 

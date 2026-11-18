@@ -152,6 +152,75 @@ lines/_draft-*
 重建索引时命中即跳过；适合放「不可入库」的历史档案或本机生成物。语料清洗规则与统计建议
 另放 `sessions/corpus/_CLEANING.md`，保证「语料≠原文」可追溯。
 
+## 五·二、断言库体检（P2 phase 0，只读）
+
+```bash
+python3 tools/sp_assert_audit.py            # 人读
+python3 tools/sp_assert_audit.py --json     # 机读
+python3 tools/sp_assert_audit.py --strict   # 有硬问题 rc=1
+```
+
+- 检查：重复编号、断号、缺 `status`、`已被取代但无 superseded_by`、断链、取代环、引用覆盖。
+- 切块测算：当前 700/1400 字窗口有多少块跨多条断言、多少断言被切开；改成“一条 `## A` 一块”后多少块/超长。
+- **只读**：不改 `assertions.md`、不改 schema、不重建索引；用于决定 P2-1 的切块与迁移成本。
+
+**P2-1 状态层（v0.16 候选）**
+
+```bash
+python3 tools/sp_assert_meta.py --scan          # 从 Markdown 扫状态 → sidecar
+python3 tools/sp_assert_meta.py --apply         # 写 knowledge/assertions.meta.json
+python3 tools/sp_assert_meta.py --set A012 --status superseded --by A031 --reason "..."
+```
+
+- 机器状态放 sidecar，不重写 `assertions.md`；状态：`active / superseded / refuted / vacant / unknown`。
+- `sp_index` 把 `assertions.md` 按“一条 `## A` 一块”切；>1400 字二次切分；`vacant` 跳过。
+- `chunks` 增 `assertion_id/status/superseded_by`；旧库自动 `ALTER TABLE`；`sp_index_merge` 兼容旧分片。
+- `sp_semantic` 结果带 `A编号/status`；active/unknown 优先，superseded 排后并标 `⚠ 已被 Axxx 取代`；`--active-only` 可隐藏。
+
+**P2-2 取代提案**
+
+```bash
+python3 tools/sp_supersede.py --from-conflict          # 只读列出冲突
+python3 tools/sp_supersede.py --propose A012 --by A031 --reason "旧路径" --apply
+python3 tools/sp_supersede.py --confirm A012 --by A031 --reason "确认" --apply
+```
+
+- propose 只写 `knowledge/supersede-events.jsonl`；confirm 才写 sidecar（status=superseded）。
+- 不自动改 Markdown 正本；人工确认是硬要求。
+
+## 五·三、环境指纹（v0.16 候选）
+
+```bash
+python3 tools/sp_embed_bench.py --quick --json   # 输出 env: hardware_fp/model_fp/llama_version/backend
+python3 tools/sp_index.py --status               # model: fp=...；与 BUILD.model_fp 不一致会提示 --full
+```
+
+- `sp_fingerprint.py` 是单一实现：硬件、模型 md5 前 12、llama-server 版本、backend。
+- **只有 `model_fp` 是硬键**：模型文件（同一 GGUF）变了才需要 `--full` 重建；换机器、8GB→16GB、换 backend、llama build 变化都只是 **soft env**，不失效向量。
+- `BUILD.json` 记 `model_fp/llama_version/backend/hardware_fp`；`--status` 把 `model` 标 `[hard]`、`env` 标 `[soft: 只影响性能/bench]`。
+- 指纹只用于“环境同一性/漂移提示”，不作吞吐 SLA；bench 仍应取多次中位数。
+
+## 五·四、S0 敏感层与可选脱敏（v0.16 候选）
+
+> 关键事实：**索引干净 ≠ 归档干净**。S1 转换会脱敏，但 `evidence/*/S0-archive/` 是原文。
+
+```bash
+# 只读预览：哪些 S0 文件含密钥形态（不打印内容）
+python3 tools/sp_archive.py --scrub --dry --only pi
+# 归档时脱敏（copy-on-write；源文件字节不变；不是 hardlink）
+python3 tools/sp_archive.py --scrub --apply --only cc --since 30d
+# 全库巡检（只报文件数/样本路径，写 alerts/s0-scan.json）
+python3 tools/sp_s0scan.py --write-state
+```
+
+- `--scrub` 默认关闭；开启后该文件是实体副本（不能 hardlink），磁盘会增加。
+- 已 scrubbed 的文件按 `src_mtime+size` 幂等跳过；`--rescrub` 强制重写。
+- 二进制/超大文件不脱敏，manifest 记 `scrubbed: false` 与 `note`。
+- `sp_s0scan` 由 steward 每周跑一次；`ssot_check` 显示 `[archive] S0 密钥形态 x/y 文件 · policy=high/scrub=off`。
+- `profile/evidence-policy.json` 记 `sensitivity:high / scrub_default:false / scan_interval_days:7`；默认保留原文。
+- `evidence/` 视同敏感层：`tmutil addexclusion ~/ssot/evidence`（或同步工具排除）；不要提交到公开仓。
+- 只想验某个源：`sp_s0scan.py --only pi`（只报该 harness 的计数/路径）。
+
 ## 五·五、索引生命周期（分类与退出，v0.15 候选）
 
 **分类摄入（opt-in）**

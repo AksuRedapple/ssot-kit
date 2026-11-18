@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "sensitivity": "high",
+  "scrub_default": false,
+  "scan_interval_days": 7,
+  "backup": "exclude",
+  "note": "S0-archive is raw session data; scrub is opt-in and irreversible"
+}

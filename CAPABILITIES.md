@@ -1,4 +1,4 @@
-# kit 能力清单（v0.15.0 · 2026-11-18）
+# kit 能力清单（v0.16.0 · 2026-11-19）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -24,14 +24,21 @@
 | `sp_handoff.py` | 收工交接四段 + 检查 | `python3 tools/sp_handoff.py --check` |
 | `sp_coverage.py` | 覆盖审计（原始/转录/索引缺口；OpenCode 分母=v2 根+legacy-only 根） | `python3 tools/sp_coverage.py` |
 | `sp_sources.py` | 会话源发现（harness 真源；覆盖审计的分母，不拿归档自证） | `python3 tools/sp_sources.py` |
-| `sp_archive.py` | S0 归档（opt-in；默认 dry-run，同卷 hardlink，跨卷 copy） | `python3 tools/sp_archive.py --apply` |
+| `sp_archive.py` | S0 归档（opt-in；同卷 hardlink；`--scrub` copy-on-write 脱敏，源不动） | `python3 tools/sp_archive.py --apply` / `--scrub` |
+| `sp_s0scan.py` | S0 归档密钥形态巡检（只报计数/路径，不打印内容） | `python3 tools/sp_s0scan.py --write-state` |
 | `sp_recall.py` | 关键词兜底检索（不依赖索引；S1/S0/live 三层，输出脱敏） | `python3 tools/sp_recall.py "<关键词>" --raw` |
 | `sp_drafts.py` | 收尾草稿 → registry 候选行（只读，不自动转正） | `python3 tools/sp_drafts.py --list` |
 | `sp_classify.py` | S1 会话分类（session_class）backfill / 规则扫描 / 手工覆盖 | `python3 tools/sp_classify.py --scan` |
 | `sp_exit.py` | 索引退出：stable sid manifest / tombstone / verify / 审计 | `python3 tools/sp_exit.py --retire <manifest> --apply` |
 | `sp_golden.py` | golden 回归；本机 agent 用 `--init/--suggest` 产出查询，基线只落实例 | `python3 tools/sp_golden.py --init` / `--check` |
 | `sp_policy.py` | 策略读取库（index-policy / retired），供上面四件共用 | 被 `sp_index` / `sp_coverage` 调用 |
-| `sp_embed_bench.py` | 嵌入吞吐基准（只读，不写索引/不重启服务） | `python3 tools/sp_embed_bench.py --quick` |
+| `sp_assert_audit.py` | 断言库体检（状态/断链/环/引用/切块成本；只读） | `python3 tools/sp_assert_audit.py` |
+| `sp_assert_meta.py` | 断言机器状态 sidecar（active/superseded/refuted/vacant/unknown） | `python3 tools/sp_assert_meta.py --scan` |
+| `sp_supersede.py` | 断言取代提案/确认（append-only 事件 + meta） | `python3 tools/sp_supersede.py --propose A012 --by A031 --apply` |
+| `sp_assert_lib.py` | assertions.md 解析（audit/meta/index 共用） | 被上面三件调用 |
+| `sp_index_merge.py` | 合并分片索引（兼容 assertion_id/status/superseded_by） | `python3 tools/sp_index_merge.py --out ...` |
+| `sp_embed_bench.py` | 嵌入吞吐基准（只读；输出 hardware/model/llama/backend 指纹） | `python3 tools/sp_embed_bench.py --quick` |
+| `sp_fingerprint.py` | 环境指纹单一实现（bench/BUILD/status 共用） | 被 `sp_embed_bench` / `sp_index` 调用 |
 | `sp_embed_autotune.py` | 探测 + 基准 → `profile/embed-profile.json`（不自动重启） | `python3 tools/sp_embed_autotune.py --bench --quick --apply` |
 | `serve_embed.sh` | 嵌入服务启动；读 profile，env 可覆盖 | `EMBED_CONFIG_DRY=1 bash tools/serve_embed.sh` |
 | `sp_takeover_lint.py` | 线页接手面四规则自检 | `python3 tools/sp_takeover_lint.py` |

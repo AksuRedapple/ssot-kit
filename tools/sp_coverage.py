@@ -236,6 +236,7 @@ def main():
                                                   if (rl.get(p['src']) or {}).get('role', 'human') != 'tool')
     tool_raw = sum(r['raw'] for r in pending if (rl.get(p['src']) or {}).get('role') == 'tool')
     tot_idx = sum(r['covered'] for r in rows)
+    denom = max(human_raw, tot_idx)     # opencode raw 会随 DB 清理缩水；避免出现 451/434 的倒挂
     miss = sum(p['raw'] for p in pending if (rl.get(p['src']) or {}).get('role', 'human') != 'tool')
     tail = []
     if miss:
@@ -248,7 +249,7 @@ def main():
     tail_txt = ('；' + '；'.join(tail)) if tail else '；无未接入源'
     if skipped_total:
         tail_txt += f'；策略跳过 {skipped_total}'
-    print(f"\n结论:已索引 {tot_idx}/{human_raw} 人类源会话" + tail_txt)
+    print(f"\n结论:已索引 {tot_idx}/{denom} 人类源会话" + tail_txt)
     return 0
 
 

@@ -27,6 +27,31 @@ if [ -f "$ROOT/tools/ssot_check.py" ]; then
   say "report: SSOT_REPORT.md"
 fi
 
+# S0 归档密钥形态巡检（每周一次；只报计数，不打印内容）
+if [ -f "$ROOT/tools/sp_s0scan.py" ]; then
+  S0_STATE="$ROOT/alerts/s0-scan.json"
+  S0_DUE=$(python3 - "$S0_STATE" <<'PY'
+import os, sys, time
+p = sys.argv[1]
+try:
+    print(1 if time.time() - os.path.getmtime(p) > 7 * 86400 else 0)
+except OSError:
+    print(1)
+PY
+)
+  [ "$S0_DUE" = "1" ] && python3 "$ROOT/tools/sp_s0scan.py" --write-state >/dev/null 2>&1 || true
+  S0_LINE=$(python3 - "$S0_STATE" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+    print(f"{d.get('files_hit', 0)}/{d.get('scanned', 0)} 文件 · {d.get('matches', 0)} 处")
+except Exception:
+    print('未扫描')
+PY
+)
+  say "S0 secrets: ${S0_LINE}"
+fi
+
 DRAFTS=$(find "$ROOT/sessions/_pending" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 say "pending drafts: ${DRAFTS}"
 say "== steward done =="

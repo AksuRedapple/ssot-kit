@@ -317,7 +317,23 @@ def coverage_line(root):
     # 未平账缺口 = 各源 S1(减空壳/策略跳过) 未覆盖量 + 未接入人类源；不能用 raw-idx（S1 可能多于 raw）
     unresolved = sum(r.get('gap_idx', 0) for r in rows) + miss
     skipped = sum(r.get('skipped', 0) for r in rows)
-    return idx, human_raw, miss, tool, unresolved, skipped
+    denom = max(human_raw, idx)          # opencode raw 会随 DB 清理缩水；避免倒挂
+    return idx, denom, miss, tool, unresolved, skipped
+
+
+def archive_line(root):
+    p = os.path.join(root, 'alerts', 's0-scan.json')
+    try:
+        with open(p, encoding='utf-8') as f:
+            d = json.load(f)
+    except Exception:
+        return None
+    try:
+        pol = json.load(open(os.path.join(root, 'profile', 'evidence-policy.json'), encoding='utf-8'))
+        d['_policy'] = pol
+    except Exception:
+        d['_policy'] = {}
+    return d
 
 
 def dead_path_examples(tk, limit=3):
@@ -503,6 +519,21 @@ def main():
         if unresolved > 0:
             cov_note = f"覆盖缺口 {unresolved}"
 
+    # 2e2. S0 归档敏感性（2026-11-18）
+    archive_note = ''
+    ar = archive_line(root)
+    if ar:
+        hit = int(ar.get('files_hit') or 0)
+        pol = ar.get('_policy') or {}
+        ptxt = ''
+        if pol:
+            ptxt = (f" · policy={pol.get('sensitivity', 'high')}"
+                    f"/scrub={'on' if pol.get('scrub_default') else 'off'}")
+        print(f"[archive] S0 密钥形态 {hit}/{ar.get('scanned', 0)} 文件 · {ar.get('matches', 0)} 处"
+              + ptxt + (f" · 样本见 alerts/s0-scan.json" if hit else ''))
+        if hit:
+            archive_note = f"S0 密钥 {hit} 文件"
+
     # 2h. 断言 verify 字段(2026-11-04)
     vl = verify_lint(root)
     print(f"[verify] 可执行断言 {vl['total']} 条" + (f" · 失败 {vl['fail']}" if vl['fail'] else " · 全过"))
@@ -598,6 +629,8 @@ def main():
     notes = []
     if cov_note:
         notes.append(cov_note)
+    if archive_note:
+        notes.append(archive_note)
     if tk and tk.get('dead_paths'):
         notes.append(f"死路径 {tk['dead_paths']}")
     if lag and lag.startswith('落后'):
