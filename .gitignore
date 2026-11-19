@@ -6,3 +6,6 @@ models/
 __pycache__/
 .venv/
 .DS_Store
+
+# 本地工具状态（Qoder omq 等）
+.omq/

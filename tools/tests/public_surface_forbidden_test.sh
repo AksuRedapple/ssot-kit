@@ -18,5 +18,11 @@ rm -f "$T/kit/profile/golden-baseline.json"
 out=$(bash "$T/kit/scripts/public-audit.sh" 2>&1); rc=$?
 chk "$rc" "0" "移除后 audit rc=0"
 
+# 本地工具状态目录（.omq）不参与公开面
+mkdir -p "$T/kit/.omq/state"
+printf '{"p":"%s"}\n' "/Users/${USER}/private" > "$T/kit/.omq/state/x.json"
+out=$(bash "$T/kit/scripts/public-audit.sh" 2>&1); rc=$?
+chk "$rc" "0" ".omq 本地状态不误报"
+
 [ $fail -eq 0 ] && echo "全部通过" || echo "有失败"
 exit $fail

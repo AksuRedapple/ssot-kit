@@ -321,6 +321,14 @@ def coverage_line(root):
     return idx, denom, miss, tool, unresolved, skipped
 
 
+def pending_line(root):
+    try:
+        p = os.path.join(root, 'S2-index', 'pending-index.json')
+        return json.load(open(p, encoding='utf-8'))
+    except Exception:
+        return None
+
+
 def archive_line(root):
     p = os.path.join(root, 'alerts', 's0-scan.json')
     try:
@@ -615,6 +623,14 @@ def main():
     else:
         print('[build] 无 BUILD.json（索引尚未记录 built_at_commit）')
 
+    pending = pending_line(root)
+    if pending:
+        print(f"[pending-index] {pending.get('sessions', 0)} 会话 / ~{pending.get('est_blocks', 0)} 块"
+              f" · since {pending.get('created_at', '-')}"
+              + (f" · 已索引待压实" if pending.get('pack_stale') else ""))
+    else:
+        pending = {}
+
     # 7. 草稿/未尽/演练
     drafts = len(glob.glob(os.path.join(root, 'sessions', '_pending', '*.md')))
     loops = 0
@@ -637,6 +653,8 @@ def main():
         notes.append(f"索引{lag}")
     if drafts:
         notes.append(f"草稿 {drafts}")
+    if pending:
+        notes.append(f"待索引 {pending.get('sessions', 0)} 会话")
     tail = f"{issues} 项需处理" if issues else "健康"
     if notes:
         tail += "；提示 " + "、".join(notes)

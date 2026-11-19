@@ -221,6 +221,21 @@ python3 tools/sp_s0scan.py --write-state
 - `evidence/` 视同敏感层：`tmutil addexclusion ~/ssot/evidence`（或同步工具排除）；不要提交到公开仓。
 - 只想验某个源：`sp_s0scan.py --only pi`（只报该 harness 的计数/路径）。
 
+## 五·七、pending-index 交接（v0.17 候选）
+
+```bash
+sp_convert.py --src cc --incremental     # 结束写 S2-index/pending-index.json（sessions/est_blocks）
+sp_index.py --plan --json                # pending_sources / pending_blocks（精确）
+sp_pending.py --decide --json            # run | defer | skip
+sp_pending.py --status                   # 标记内容
+```
+
+- steward 每次窗口先 `--decide`：pending=0 跳过；低于阈值执行；超阈值/窗口外只记 `index: deferred`。
+- 阈值/窗口可用 `profile/steward-index.json`（`{threshold, window, force}`）或 env `SSOT_STEWARD_INDEX_THRESHOLD/WINDOW/FORCE`。
+- `sp_index` 成功按 generation 清标记；索引期间又来新转换则保留。
+- `--no-pack` 不清标记，标 `pack_stale:true`；`--pack-only` 且 pending=0 才清。
+- `ssot_check [pending-index]` 显示未结算规模；不依赖 `[build]` 的 commit 落后。
+
 ## 五·六、P4 退休候选（只读）
 
 ```bash

@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.17.0] - 2026-11-19 — pending-index 交接与公开面修复
+
+- **feat(pending)**: `sp_convert` 写 `S2-index/pending-index.json`（sessions/est_blocks/generation）；`sp_index --plan --json` 输出精确 pending；steward 按阈值/窗口 `run|defer|skip`；`ssot_check [pending-index]` 可见
+- **fix(public-audit)**: 公开面审计改为 git `--cached --others --exclude-standard`（尊重 `.gitignore`），fallback 跳过 `.omq`；新增 `.omq` 回归
+
 ## [0.16.1] - 2026-11-19 — P4 检索命中数据收集
 
 - **feat(p4)**: `sp_semantic` search-log 增 `topk_paths/topk_sids`（cap 20）与 `--no-log` 敏感查询开关；新增只读 `sp_retire_candidates.py --days 180`（零命中候选，不自动删）

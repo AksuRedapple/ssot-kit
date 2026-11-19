@@ -152,3 +152,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `sp_semantic.py "<查询>"` → 查 `S2-index/search-log.jsonl` → `sp_retire_candidates.py --days 180` |
 | 判据 | ① 日志含 `topk_paths/topk_sids`（cap 20） ② `--no-log` 不写 ③ 候选排除 retired/policy 跳过 ④ 低日志/低覆盖标记 low_confidence ⑤ 只读不删 |
 | 反例 | 零命中直接自动 `sp_exit` → FAIL；日志写入正文/查询原文未脱敏 → FAIL |
+
+## 17 pending-index 交接（v0.17 候选）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 懒触发采集后，大索引不随机撞点；规模可见、承诺持久、可改期 |
+| 步骤 | `sp_convert` → `sp_pending --status` → `sp_index --plan --json` → `sp_pending --decide` → steward |
+| 判据 | ① convert 后 marker 存在且含 sessions/est_blocks ② plan 有精确 pending_blocks ③ 超阈值/窗口外 defer ④ 索引成功后 marker 清 ⑤ `--no-pack` 保留 pack_stale |
+| 反例 | 大索引仍被 steward 无条件执行 → FAIL；索引期间新转换被 marker 清除吞掉 → FAIL |

@@ -1,4 +1,4 @@
-# kit 能力清单（v0.16.1 · 2026-11-19）
+# kit 能力清单（v0.17.0 · 2026-11-19）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -31,6 +31,7 @@
 | `sp_classify.py` | S1 会话分类（session_class）backfill / 规则扫描 / 手工覆盖 | `python3 tools/sp_classify.py --scan` |
 | `sp_exit.py` | 索引退出：stable sid manifest / tombstone / verify / 审计 | `python3 tools/sp_exit.py --retire <manifest> --apply` |
 | `sp_retire_candidates.py` | P4 零命中退休候选（只读；top-k 日志聚合，人工裁决） | `python3 tools/sp_retire_candidates.py --days 180` |
+| `sp_pending.py` | 采集→索引交接标记；steward 按 pending 规模/窗口决定 run/defer | `python3 tools/sp_pending.py --decide` |
 | `sp_golden.py` | golden 回归；本机 agent 用 `--init/--suggest` 产出查询，基线只落实例 | `python3 tools/sp_golden.py --init` / `--check` |
 | `sp_policy.py` | 策略读取库（index-policy / retired），供上面四件共用 | 被 `sp_index` / `sp_coverage` 调用 |
 | `sp_assert_audit.py` | 断言库体检（状态/断链/环/引用/切块成本；只读） | `python3 tools/sp_assert_audit.py` |

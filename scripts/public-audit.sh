@@ -9,17 +9,34 @@ python3 - "$KIT" <<'PY'
 from pathlib import Path
 from urllib.parse import unquote
 import re
+import subprocess
 import sys
 
 root = Path(sys.argv[1]).resolve()
-skip_dirs = {".git", "__pycache__", ".venv"}
-files = []
-for path in root.rglob("*"):
-    if not path.is_file() or any(part in skip_dirs for part in path.parts):
-        continue
-    if path.suffix in {".pyc", ".db"} or path.name == ".DS_Store":
-        continue
-    files.append(path)
+skip_dirs = {".git", "__pycache__", ".venv", ".omq"}
+
+def git_public_files(root):
+    """公开面 = tracked + untracked 且未被 .gitignore 忽略。"""
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            stderr=subprocess.DEVNULL)
+        paths = [p for p in out.decode("utf-8", "replace").split("\0") if p]
+        if paths:
+            return [root / p for p in paths if (root / p).is_file()]
+    except Exception:
+        pass
+    return None
+
+files = git_public_files(root)
+if files is None:
+    files = []
+    for path in root.rglob("*"):
+        if not path.is_file() or any(part in skip_dirs for part in path.parts):
+            continue
+        if path.suffix in {".pyc", ".db"} or path.name == ".DS_Store":
+            continue
+        files.append(path)
 
 sensitive = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
@@ -49,7 +66,7 @@ for d in ("evidence", "S2-index", "models", "logs", "alerts", "backups", "compil
     if (root / d).exists():
         issues.append(f"{d}/: forbidden instance directory in public kit")
 for p in root.rglob("*golden-baseline*"):
-    if p.is_file():
+    if p.is_file() and not any(part in skip_dirs for part in p.parts):
         issues.append(f"{p.relative_to(root)}: forbidden golden baseline artifact")
 
 texts = {}

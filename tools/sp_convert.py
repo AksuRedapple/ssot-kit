@@ -32,6 +32,9 @@ def scrub(text):
         text = rx.sub(rep, text)
     return text
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sp_pending  # noqa: E402
+
 VAULT = os.path.expanduser('~/ssot')
 SRCS = {
     'qoder': ('evidence/qoder/S0-archive/qoder-projects', 'evidence/qoder/S1-sessions'),
@@ -537,12 +540,21 @@ def main():
     elif not a.all:
         sys.exit('请给 --sid / --all / --incremental')
 
+    converted = 0
+    rows_total = 0
     for p in targets:
         try:
             outdir, counts, n = convert(p, a.title, a.force)
+            converted += 1
+            rows_total += n
             print(f"✅ {os.path.basename(outdir)}  ({n} 行· 用户{counts['user']}/助手{counts['assistant']}/工具{counts['tool_use']}/压缩{counts['compactions']})")
         except Exception as e:
             print(f"❌ {os.path.basename(p)}: {e}")
+    if converted:
+        d = sp_pending.merge(sessions=converted, est_blocks=rows_total,
+                             by_session=os.environ.get('SSOT_SESSION_ID') or os.environ.get('QODER_SESSION_ID'))
+        print(f"📌 待索引：{d['sessions']} 会话 / ~{d['est_blocks']} 块（未结算）")
+        print("   下一步：python3 tools/sp_index.py --incremental")
 
 if __name__ == '__main__':
     main()

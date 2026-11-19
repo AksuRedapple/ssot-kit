@@ -260,7 +260,8 @@ def main():
             for r in records:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')
 
-    summary = {'apply': a.apply, 'hardlink': hardlink, 'ts': time.time(), **stats}
+    summary = {'apply': a.apply, 'hardlink': hardlink, 'ts': time.time(),
+               'needs_convert': bool(a.apply and (stats['new'] or stats['update'])), **stats}
     if a.json:
         print(json.dumps({'summary': summary, 'records': records[:50]}, ensure_ascii=False, indent=1))
     else:
@@ -272,6 +273,8 @@ def main():
             if a.scrub:
                 print(f"  scrub {stats['scrub']} · 脱敏 {stats['redactions']} 处 · "
                       f"未扫描/二进制 {stats['unscanned']}")
+            if summary['needs_convert']:
+                print(f"📌 归档 {stats['new']} 新 / {stats['update']} 更新；下一步 sp_convert，再 sp_index")
         else:
             if a.scrub:
                 hits = [r for r in records if r.get('redactions', 0) > 0]

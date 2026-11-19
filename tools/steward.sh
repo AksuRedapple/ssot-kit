@@ -14,8 +14,22 @@ say "== steward begin =="
 if [ "${SSOT_STEWARD_SKIP_INDEX:-0}" = "1" ]; then
   say "index: skipped（SSOT_STEWARD_SKIP_INDEX=1）"
 elif [ -f "$ROOT/tools/sp_index.py" ] && curl -s -m 3 http://127.0.0.1:8399/health >/dev/null 2>&1; then
-  LINE=$(cd "$ROOT" && python3 tools/sp_index.py --incremental 2>&1 | tail -1)
-  say "index: ${LINE}"
+  DEC=""
+  [ -f "$ROOT/tools/sp_pending.py" ] && DEC=$(cd "$ROOT" && python3 tools/sp_pending.py --decide --json 2>/dev/null || true)
+  ACTION=$(printf '%s' "$DEC" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("action","run"))
+except Exception: print("run")' 2>/dev/null || echo run)
+  PEND=$(printf '%s' "$DEC" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("pending_blocks") or 0)
+except Exception: print(0)' 2>/dev/null || echo 0)
+  if [ "$ACTION" = "defer" ]; then
+    say "index: deferred (pending=${PEND})"
+  elif [ "$ACTION" = "skip" ]; then
+    say "index: skip (pending=0)"
+  else
+    LINE=$(cd "$ROOT" && python3 tools/sp_index.py --incremental 2>&1 | tail -1)
+    say "index: ${LINE}"
+  fi
 else
   say "index: skipped（8399 不在或 sp_index.py 缺失）"
 fi

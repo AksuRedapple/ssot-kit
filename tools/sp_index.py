@@ -42,6 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sp_policy  # noqa: E402
 import sp_fingerprint  # noqa: E402
 import sp_assert_lib  # noqa: E402
+import sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
@@ -805,6 +806,7 @@ def main():
     global DB, POLICY, RETIRED, SKIPPED, POLICY_SKIPPED
     POLICY = sp_policy.load_policy(SSOT)
     RETIRED, _retired_events = sp_policy.load_retired(SSOT)
+    START_GEN = int(sp_pending.load().get('generation') or 0)
     if '--status' in sys.argv:
         # 只读：放在实例锁之前，构建进行中也能查版本与块数
         print("active: %s" % (active_version() or '(legacy index.db)'))
@@ -924,6 +926,11 @@ def main():
             sys.exit('索引不存在——先跑全量')
         refresh_pack()
         write_build(preserve_policy=True)
+        try:
+            os.close(lock_fd)       # 让 plan 子进程能拿锁
+        except Exception:
+            pass
+        sp_pending.clear_pack_stale_if_settled()
         return
     if '--fts-only' in sys.argv:
         if not os.path.exists(DB):
@@ -958,23 +965,41 @@ def main():
                                     all_classes, only_classes, include_retired)
 
     if '--plan' in args:
-        print(f"policy: {sp_policy.summary(POLICY, len(RETIRED))}")
-        print(f"include: {len(groups)} 源 / {sum(len(g[2]) for g in groups)} 块")
-        print(f"skip:    {len(SKIPPED)} 源 / {sum(x['blocks'] for x in SKIPPED)} 块")
-        for x in SKIPPED[:100]:
-            print(f"  - {x['sid'][:8]} [{x['class']}] {x['reason']} · {x['path']} ({x['blocks']} 块)")
-        if len(SKIPPED) > 100:
-            print(f"  … 其余 {len(SKIPPED) - 100} 源")
         db = resolve_db()
+        prev = {}
+        would = 0
         if os.path.exists(db):
             con = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
-            would = 0
+            try:
+                prev = dict(con.execute('select path,digest from src_state').fetchall())
+            except Exception:
+                prev = {}
             for x in POLICY_SKIPPED:
                 p = x['path']
                 if os.path.basename(p) in ('transcript.jsonl', 'subagents.md') or p.endswith('.jsonl'):
                     would += con.execute('select count(*) from chunks where path=?', (p,)).fetchone()[0]
             con.close()
-            print(f"would remove: {would} 块（--apply-policy）")
+        pending = [g for g in groups if prev.get(g[0]) != g[1]]
+        out = {'db': db, 'policy': sp_policy.summary(POLICY, len(RETIRED)),
+               'include_sources': len(groups),
+               'include_blocks': sum(len(g[2]) for g in groups),
+               'skip_sources': len(SKIPPED),
+               'skip_blocks': sum(x['blocks'] for x in SKIPPED),
+               'pending_sources': len(pending),
+               'pending_blocks': sum(len(g[2]) for g in pending),
+               'would_remove': would}
+        if '--json' in args:
+            print(json.dumps(out, ensure_ascii=False, indent=1))
+            return 0
+        print(f"policy: {out['policy']}")
+        print(f"include: {out['include_sources']} 源 / {out['include_blocks']} 块")
+        print(f"skip:    {out['skip_sources']} 源 / {out['skip_blocks']} 块")
+        for x in SKIPPED[:100]:
+            print(f"  - {x['sid'][:8]} [{x['class']}] {x['reason']} · {x['path']} ({x['blocks']} 块)")
+        if len(SKIPPED) > 100:
+            print(f"  … 其余 {len(SKIPPED) - 100} 源")
+        print(f"pending: {out['pending_sources']} 源 / {out['pending_blocks']} 块")
+        print(f"would remove: {would} 块（--apply-policy）")
         return 0
 
     if '--apply-policy' in args:
@@ -1068,6 +1093,7 @@ def main():
         else:
             refresh_pack()
         write_build()
+        sp_pending.after_index(START_GEN, '--no-pack' in sys.argv, n > 0)
         print(f'✅ 全量 {n} 块 → {DB}  用时 {time.time() - t0:.0f}s')
         if build_dir:
             ready = build_dir[:-len('.building')] if build_dir.endswith('.building') else build_dir
@@ -1114,6 +1140,7 @@ def main():
         removed = [p for p in prev if p not in digests]
         if not changed and not removed:
             write_build()
+            sp_pending.after_index(START_GEN, '--no-pack' in sys.argv, False)
             print(f'✅ 增量：无变化（{len(groups)} 源 / {total} 块）  用时 {time.time() - t0:.0f}s')
             return
         old_rows = {}
@@ -1146,6 +1173,7 @@ def main():
     else:
         refresh_pack()
     write_build()
+    sp_pending.after_index(START_GEN, '--no-pack' in sys.argv, n > 0)
     print(f'✅ 增量完成：新嵌 {n} 块 / 复用 {reused} 块（{len(todo)} 源）  用时 {time.time() - t0:.0f}s')
 
 
