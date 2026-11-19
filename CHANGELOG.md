@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.17.1] - 2026-11-19 — 修复 sp_semantic NameError
+
+- **fix(semantic)**: 补回 `sid_from_path()`。v0.17.0 只带了调用没带定义，`sp_semantic.py` 一运行就 `NameError`——语义检索、相关推荐、节点内检索（语义部分）全线降级。口径＝路径里 `S1-sessions|S1-subagents` 目录名日期后的 8 位 hex；子 agent 取**目录名**，不是 `agent-<hash>` 文件名
+- **test(semantic)**: 新增 `tools/tests/test_sp_semantic_sid.py`，用 2026-11-19T01:47 真实 search-log 的 `22ed5f66` / `0c97ee41` 样本回归，并校验真实库全量路径（会话块全解析、非会话块零误判）
+
 ## [0.17.0] - 2026-11-19 — pending-index 交接与公开面修复
 
 - **feat(pending)**: `sp_convert` 写 `S2-index/pending-index.json`（sessions/est_blocks/generation）；`sp_index --plan --json` 输出精确 pending；steward 按阈值/窗口 `run|defer|skip`；`ssot_check [pending-index]` 可见

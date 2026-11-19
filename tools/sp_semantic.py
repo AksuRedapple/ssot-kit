@@ -286,6 +286,23 @@ def order_results(results, active_only=False):
     return results
 
 
+SID_RX = re.compile(r'/(?:S1-sessions|S1-subagents)/(?:\d{4}-\d{2}-\d{2}-)?([0-9a-f]{8})(?=[-/])')
+
+
+def sid_from_path(path):
+    """chunk path → 8 位会话 id；非会话块（assertions/线页/inbox）返回 ''。
+
+    口径对齐 2026-11-19T01:47 的历史 search-log：
+      evidence/qoder/S1-sessions/2026-11-04-22ed5f66-…/transcript.jsonl → 22ed5f66
+      evidence/cc/S1-subagents/2026-09-15-0c97ee41-…/agent-<16hex>.jsonl → 0c97ee41
+    子 agent 块的 sid 取**目录名**，不取 agent-<hash> 文件名（那是派生块 id）。
+    """
+    if not path:
+        return ''
+    m = SID_RX.search(str(path).replace('\\', '/'))
+    return m.group(1) if m else ''
+
+
 def embed(text):
     req = urllib.request.Request(
         API,
