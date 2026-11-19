@@ -163,6 +163,39 @@ def normalize_conf(value):
     return None
 
 
+ENTRY_RE = re.compile(r'^-\s+(?:\d{4}-\d{2}-\d{2}\s+)?\[[A-Za-z_-]+\]')
+
+
+def is_entry(line):
+    """inbox 里只有「- [type] ...」或「- YYYY-MM-DD [type] ...」才算一条贡献；
+    结构化笔记（要点列表）不是条目，不计入未提纯。"""
+    return bool(ENTRY_RE.match(line))
+
+
+def marker_count(root):
+    """当前工作区里带 `→` 标记的条目数（只认条目行）。"""
+    n = 0
+    for p in glob.glob(os.path.join(root, 'inbox', '*.md')):
+        if os.path.basename(p) == 'README.md':
+            continue
+        for line in open(p, errors='replace'):
+            if is_entry(line) and '→' in line:
+                n += 1
+    return n
+
+
+def head_marker_count(root):
+    """HEAD 里的标记条目数；git 不可用/无 HEAD 时返回 None。"""
+    try:
+        out = subprocess.run(['git', '-C', root, 'grep', '-h', '→', 'HEAD', '--', 'inbox'],
+                             capture_output=True, text=True)
+        if out.returncode not in (0, 1):
+            return None
+        return sum(1 for l in out.stdout.splitlines() if is_entry(l) and '→' in l)
+    except Exception:
+        return None
+
+
 def inbox_stats(root):
     total = conf = normalized = 0
     bad = []
@@ -170,7 +203,7 @@ def inbox_stats(root):
         if os.path.basename(p) == 'README.md':
             continue
         for line in open(p, errors='replace'):
-            if not line.startswith('- '):
+            if not is_entry(line):
                 continue
             total += 1
             # (?<![\w.]) 防误命中文件名/配置键：`_meta/agents.conf:pi 行` 曾被当成 conf 值；
@@ -487,11 +520,20 @@ def main():
     ib = inbox_stats(root)
     pending = sum(1 for p in glob.glob(os.path.join(root, 'inbox', '*.md'))
                   if os.path.basename(p) != 'README.md'
-                  for l in open(p, errors='replace') if l.startswith('- ') and '→' not in l)
+                  for l in open(p, errors='replace') if is_entry(l) and '→' not in l)
     print(f"[inbox] 未提纯 {pending} 条" + ('（>20 条建议整理）' if pending > 20 else '') +
           f"；conf 覆盖 {ib['conf']}/{ib['total']}" +
           (f"；归一化 {ib['normalized']} 条" if ib['normalized'] else '') +
           (f"；非法值 {sorted(set(ib['bad']))}" if ib['bad'] else ''))
+
+    # 2a. 标记单调守卫（提纯只能追加，标记数不得回退）
+    cur_m = marker_count(root)
+    head_m = head_marker_count(root)
+    if head_m is not None and cur_m < head_m:
+        print(f"[inbox-guard] ❌ 标记数回退：{cur_m} < HEAD {head_m}（先看 git diff，别 checkout）")
+        issues += 1
+    elif head_m is not None:
+        print(f"[inbox-guard] 标记数 {cur_m}（HEAD {head_m}）")
 
     # 2b. 捕获层（S1，2026-10-28）
     st_n, st_today, alive_min, last_line = capture_stats(root)

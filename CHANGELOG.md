@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog and the project uses semantic versioning.
 
+## [0.18.0] - 2026-11-20 — 提纯护栏与技能入仓
+
+- **feat(purify)**: 新增 `tools/sp_purify.py`——默认 dry-run；只处理未标记条目；`--remap` 才重算；`--apply` 前自动备份 `inbox/`；写完做标记数单调校验
+- **fix(check)**: `ssot_check` 的「未提纯」只认条目行（`- [type]` / `- YYYY-MM-DD [type]`），结构化笔记不再被误计；新增 `[inbox-guard]` 标记数 vs HEAD 回退告警
+- **feat(skills)**: 公开版 `skills/ssot-ops`（路由）与 `skills/ssot-toolbox`（工具手册），路径相对仓库根、已脱敏
+- **docs(proposals)**: 新增 `docs/proposals/2026-11-20-purify-guard.md` 与 `2026-11-20-skills-ssot-ops-toolbox.md`
+- **test**: 新增 `tools/tests/test_sp_purify.py`（只追加/备份/非条目不动/单调）
+
 ## [Unreleased]
 
 No unreleased changes yet.

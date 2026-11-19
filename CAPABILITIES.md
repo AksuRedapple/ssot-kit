@@ -1,4 +1,4 @@
-# kit 能力清单（v0.17.1 · 2026-11-19）
+# kit 能力清单（v0.18.0 · 2026-11-20）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -46,6 +46,7 @@
 | `sp_takeover_lint.py` | 线页接手面四规则自检 | `python3 tools/sp_takeover_lint.py` |
 | `sp_line_status.py` | 线页「现在时」状态行派生 | `python3 tools/sp_line_status.py --apply` |
 | `sp_bootstrap.py` | 全量 dump 编排（发现→转换→建库→抽取） | `python3 tools/sp_bootstrap.py --plan` |
+| `sp_purify.py` | 安全提纯：只追加、默认 dry-run、apply 前备份、标记数单调校验 | `python3 tools/sp_purify.py --apply` |
 | `scan_sessions.py` | 存量会话普查 → TSV | `python3 tools/scan_sessions.py > /tmp/scan.tsv` |
 
 ## LLM 管道（实验性）
@@ -66,6 +67,14 @@
 | `tools/install/setup.sh` | 首装骨架 + 技能分发（多 harness 探测、`--dry`） |
 | `tools/install/update.sh` | 升级：pull → 迁移(有才跑) → 体检 |
 | `tools/install/install-service.sh` / `install-steward.sh` | 常驻服务 / 6h 值守 |
+
+## 技能
+
+| 技能 | 用途 |
+|---|---|
+| `ssot-ops` | 记忆中枢操作路由（读档/归位/提纯/检索） |
+| `ssot-toolbox` | 工具统一手册（何时用/命令/判据/坑） |
+| `ssmap` | 语义地图 |
 
 ## 公开边界
 

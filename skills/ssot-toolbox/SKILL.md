@@ -5,7 +5,7 @@ description: SSOT 工具统一手册（何时用/命令/判据/坑）｜触发: 
 
 # ssot-toolbox · SSOT 工具手册
 
-> 工具存在 ≠ 可用：没有手册的工具，等于只有作者本人会用。
+> 工具存在 ≠ 可用：没有手册的工具，等于只有作者本人会用。本手册只列**随包分发**的工具。
 
 ## 0 怎么用
 
@@ -22,15 +22,15 @@ description: SSOT 工具统一手册（何时用/命令/判据/坑）｜触发: 
 | 从会话抽候选结论 | `tools/sp_candidates.py` | 抽取→撞正本→去重→审 |
 | 交接一摊活 | `tools/sp_handoff.py` | 四段模板 + `--check` |
 | 写/同步入口文件 | `tools/sp_compile.py` | SSOT → 入口候选 |
-| 收 crop/收割 | `tools/sp_harvest.py` | 候选收割器 |
-| 导出 | `tools/sp_export.py` | S3 导出 |
-| 知识合成 | `tools/sp_synth.py` | 跨源提炼 |
-| topics 同步 | `tools/sp_topics_sync.py` | knowledge/topics ⇄ 外部 |
+| 断言体检 | `tools/sp_assert_audit.py` | 状态/重复/断号/断链/环/引用 |
+| 断言编号 | `tools/sp_assert_alloc.py` | A 编号分配（不手写） |
 | 健康检查 | `tools/ssot_check.py` | 六检查一屏 |
-| 值守 | `tools/steward.sh` | 6h 全链 |
-| 捕获引擎 | `tools/sp_capture.py` | 会话→候选（只写 staging） |
-| 邮件渲染 | `tools/sp_mail.py` | Markdown→HTML，发后回读 |
 | 安全提纯 | `tools/sp_purify.py` | 默认 dry-run，只追加，自动备份 |
+| 索引合并 | `tools/sp_index_merge.py` | 分片库 → 等价库 + `--verify` |
+| 索引版本 | `tools/sp_pending.py` / `sp_index.py --status` | 版本目录 + 原子指针 |
+| 环境指纹 | `tools/sp_fingerprint.py` | hardware/model/backend 单一实现 |
+| 覆盖度 | `tools/sp_coverage.py` | 会话/块/源三数 |
+| 契约校验 | `tools/sp_contract.py` | schema 一致性 |
 
 ## 2 核心命令
 
