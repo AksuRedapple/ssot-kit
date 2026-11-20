@@ -26,7 +26,7 @@ if [ -z "$MODEL" ] && [ -f "$DEFAULT_MODEL" ]; then MODEL="$DEFAULT_MODEL"; fi
 LOG="/tmp/ssot-embed.log"
 LABEL="com.ssot.embed"
 
-[ -f "$SERVE" ] || { echo "❌ 缺 $SERVE（先跑 scripts/setup.sh）"; exit 1; }
+[ -f "$SERVE" ] || { echo "❌ 缺 ${SERVE}（先跑 scripts/setup.sh）"; exit 1; }
 if [ -z "$LLAMA" ]; then
   LLAMA="$(command -v llama-server || true)"
 fi
@@ -35,7 +35,7 @@ if [ -z "$LLAMA" ]; then
   LLAMA="llama-server"
 fi
 if [ -n "$MODEL" ] && [ ! -f "$MODEL" ]; then
-  echo "⚠️ 缺模型 $MODEL（服务起不来；先按 docs/SEMANTIC.md 拉模型）"
+  echo "⚠️ 缺模型 ${MODEL}（服务起不来；先按 docs/SEMANTIC.md 拉模型）"
 fi
 MODEL_XML=""
 [ -n "$MODEL" ] && MODEL_XML="    <key>EMBED_MODEL</key><string>$(printf '%s' "$MODEL" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</string>"

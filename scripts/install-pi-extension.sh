@@ -38,14 +38,14 @@ if [ "$UNINSTALL" = "1" ]; then
       echo "✅ 已移除 $DST"
     fi
   else
-    echo "（无 $DST，跳过）"
+    echo "（无 ${DST}，跳过）"
   fi
   exit 0
 fi
 
 if [ "$DRY" = "1" ]; then
   echo "（dry）将复制 $SRC → $DST"
-  echo "（dry）扩展默认 ROOT=$ROOT（可用 SSOT_ROOT 覆盖）"
+  echo "（dry）扩展默认 ROOT=${ROOT}（可用 SSOT_ROOT 覆盖）"
   exit 0
 fi
 

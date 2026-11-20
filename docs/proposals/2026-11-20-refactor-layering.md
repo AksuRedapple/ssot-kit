@@ -171,3 +171,9 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - `tools/tests/shell_strict_test.sh` 把「非测试脚本必须 set -e + 例外清单收敛」变成回归。
 - 私有侧：`sp_ask.sh` 标注「薄包装需传播子进程退出码」例外；`eg2_watchdog.sh` 补 `set -u`。
   私有 `steward.sh`（L1 值守，与 kit 版不同）未动，留作单独一次小步。
+
+### 0.24.1 补记（bash 3.2）
+
+`$VAR` 后紧跟全角/中文时，macOS 自带 bash 3.2 会把多字节字符并入变量名（`ALLOW）：` →
+变量 `ALLOW\xef...`），`set -u` 下直接 unbound。CI 的 `shell: /bin/bash` 就是 3.2，
+本机 Homebrew bash 5 不报。规则：**变量在非 ASCII 字符前一律 `${VAR}`**。

@@ -27,7 +27,7 @@ for f in "$KIT"/scripts/*.sh "$KIT"/tools/*.sh "$KIT"/hooks/*.sh; do
       ;;
   esac
 done
-echo "  ok   扫描完成（例外：$ALLOW）"
+echo "  ok   扫描完成（例外：${ALLOW}）"
 
 # 例外清单本身也要收敛：新增例外必须改这里并说明理由
 n=$(echo $ALLOW | wc -w | tr -d ' ')

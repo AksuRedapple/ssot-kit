@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.24.1] - 2026-11-20 — bash 3.2 兼容修复
+
+- **fix(shell)**: `$VAR` 紧跟中文/全角标点时改用 `${VAR}`。macOS 自带 bash 3.2 会把全角字符算进变量名，配合 `set -u` 直接 `unbound variable`；CI 用的正是 `/bin/bash`，本机 Homebrew bash 5 不复现
+- 顺手修掉同类隐患：`scripts/install-pi-extension.sh`、`scripts/install-service.sh`、`tools/serve_embed.sh`、`scripts/session-gate.sh`、`tools/tests/shell_strict_test.sh`
+
 ## [0.24.0] - 2026-11-20 — shell 失败模式收口
 
 - **fix(shell)**: `scripts/session-gate.sh` 与 `tools/steward.sh` 加 `set -euo pipefail`；steward 里可能返回非零的 AND-list 改成 `if`（否则 `set -e` 会在「文件不存在」时误杀值守）

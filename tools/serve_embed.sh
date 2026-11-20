@@ -41,7 +41,7 @@ PAR="${EMBED_PARALLEL:-${P_PAR:-4}}"
 is_int() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
 for v in C B UB PAR; do
   eval "val=\${$v}"
-  is_int "$val" || { echo "⚠️ 非法 $v=$val，回退默认值"; case "$v" in C) C=8192;; B) B=2048;; UB) UB=2048;; PAR) PAR=4;; esac; }
+  is_int "$val" || { echo "⚠️ 非法 $v=${val}，回退默认值"; case "$v" in C) C=8192;; B) B=2048;; UB) UB=2048;; PAR) PAR=4;; esac; }
 done
 
 # 硬约束：ub <= b；每个 slot 至少 512 上下文；总上下文 = parallel * slot_ctx
@@ -51,7 +51,7 @@ done
 [ "$PAR" -lt 1 ] && PAR=1
 MIN_CTX=$((PAR * 512))
 if [ "$C" -lt "$MIN_CTX" ]; then
-  echo "⚠️ c=$C 小于 parallel*512=$MIN_CTX，已抬到下限（否则 slot 会被截断）"
+  echo "⚠️ c=$C 小于 parallel*512=${MIN_CTX}，已抬到下限（否则 slot 会被截断）"
   C="$MIN_CTX"
 fi
 
@@ -66,7 +66,7 @@ if [ ! -f "$MODEL" ]; then
   echo "❌ 缺模型: $MODEL"; echo "   拉取方法见 docs/SEMANTIC.md（权重不入库，按需自拉）"; exit 1
 fi
 if ! command -v "$LLAMA" >/dev/null 2>&1; then
-  echo "❌ 找不到 llama-server（$LLAMA）——安装方法见 docs/SEMANTIC.md"; exit 1
+  echo "❌ 找不到 llama-server（${LLAMA}）——安装方法见 docs/SEMANTIC.md"; exit 1
 fi
 
 echo "启动嵌入服务: $LLAMA  model=$MODEL  port=$PORT"
