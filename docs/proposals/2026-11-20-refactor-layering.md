@@ -207,3 +207,13 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
   `sp_assert_meta` / `sp_mail` 改为 `cli.warn_once`，主流程仍不因日志失败而中断。
 - 明确保留静默的：锁信息 `stamp`（诊断）、版本 STATUS 文件（advisory）、旧 meta 读取
   （缺字段只是少保留分类）、逐行解析（噪声）。
+
+### 0.27 异常处理第二批（坏行计数）
+
+- 逐行解析的 48 处静默 `continue` 中，先处理**账本/日志类**（丢了会影响状态判断）：
+  `sp_candidates.load_index`、`sp_triage.extract_from_ledger` / `ledger_counts`、
+  `sp_retire_candidates.load_hits`、`sp_subagent.parse_agent`、`sp_recall.scan_s1`、
+  `sp_export.main`（meta 读取）。
+- 做法：局部 `bad` 计数 + `cli.warn_once('bad:<path>', …)`，只在 `bad>0` 时输出到
+  stderr；坏行仍跳过，不中断批次；`--json` 的 stdout 不受污染。
+- 未处理：纯语料扫描（sp_llm_*）、逐文件 `continue` 的目录遍历——噪声大、价值低。

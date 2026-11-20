@@ -82,6 +82,7 @@ LEDGER = os.path.join(ROOT, 'inbox', 'candidates', 'candidates.jsonl')
 def extract_from_ledger(sid, since=None, top=40):
     """从唯一账本取候选(2026-10-31 通道归一):不再重扫 transcript"""
     items = []
+    bad = 0
     if not os.path.exists(LEDGER):
         return items
     for ln in open(LEDGER, encoding='utf-8', errors='replace'):
@@ -91,6 +92,7 @@ def extract_from_ledger(sid, since=None, top=40):
         try:
             c = json.loads(ln)
         except Exception:
+            bad += 1
             continue
         ev = (c.get('evidence') or [{}])[0]
         sess = str(ev.get('session', ''))
@@ -102,12 +104,15 @@ def extract_from_ledger(sid, since=None, top=40):
         if c.get('state') in ('rejected', 'duplicate', 'duplicate-known'):
             continue
         items.append((c.get('claim', ''), int(ev.get('line') or 0), c.get('type', 'fact'), c.get('state', '')))
+    if bad:
+        cli.warn_once('bad:' + LEDGER, f'{LEDGER}: 跳过 {bad} 行坏 JSON')
     return items[:top]
 
 
 def ledger_counts(sid):
     """→ (total, eligible)；total=账本里该 sid 的全部行，eligible=未被拒/去重的行。"""
     total = eligible = 0
+    bad = 0
     if not os.path.exists(LEDGER):
         return 0, 0
     for ln in open(LEDGER, encoding='utf-8', errors='replace'):
@@ -117,6 +122,7 @@ def ledger_counts(sid):
         try:
             c = json.loads(ln)
         except Exception:
+            bad += 1
             continue
         ev = (c.get('evidence') or [{}])[0]
         if sid not in str(ev.get('session', '')):
@@ -124,6 +130,8 @@ def ledger_counts(sid):
         total += 1
         if c.get('state') not in ('rejected', 'duplicate', 'duplicate-known'):
             eligible += 1
+    if bad:
+        cli.warn_once('bad:' + LEDGER, f'{LEDGER}: 跳过 {bad} 行坏 JSON')
     return total, eligible
 
 

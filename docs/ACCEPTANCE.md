@@ -242,3 +242,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `cli.warn_once`；`write_build`/`touch_build` 抛 `InstrumentError`；7 个工具的日志改 warn_once |
 | 判据 | ① BUILD 路径不可写时 `write_build` 抛 InstrumentError ② 日志不可写时主流程仍成功、stderr 只警告一次 ③ 其余行为不变 |
 | 反例 | BUILD 写失败仍打印「✅ 全量完成」→ FAIL；日志失败让检索/分发失败 → FAIL；每次调用都刷警告 → FAIL |
+
+## 27 异常处理第二批（v0.27.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 坏 JSON 行可以跳过，但不能「无声消失」；计数要能对上账 |
+| 步骤 | 6 个账本/日志/转录读取点加 `bad` 计数 + `warn_once('bad:<path>')` |
+| 判据 | ① 含 1 行坏数据时 stderr 出现「跳过 1 行」且只出现一次 ② 干净输入 stderr 无输出 ③ 坏行仍被跳过、正常行仍被处理 ④ `--json` stdout 不变 |
+| 反例 | 坏行导致整批中断 → FAIL；每行都刷警告 → FAIL；坏行被计入正常条数 → FAIL |

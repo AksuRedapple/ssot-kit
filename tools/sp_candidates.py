@@ -64,6 +64,7 @@ def guess_type(s):
 
 def load_index():
     out = {}
+    bad = 0
     if os.path.exists(OUT):
         for ln in open(OUT, encoding='utf-8'):
             ln = ln.strip()
@@ -72,8 +73,11 @@ def load_index():
             try:
                 o = json.loads(ln)
             except Exception:
+                bad += 1
                 continue
             out[o['fingerprint']] = o
+    if bad:
+        cli.warn_once('bad:' + OUT, f'{OUT}: 跳过 {bad} 行坏 JSON')
     return out
 
 

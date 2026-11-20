@@ -105,6 +105,7 @@ def scan_s1(only, rx, ctx, since, hits, seen):
             if since and os.path.getmtime(p) < since:
                 continue
             sid = sid_of(p)
+            bad = 0
             try:
                 for ln, line in enumerate(open(p, encoding='utf-8', errors='replace'), 1):
                     if not rx.search(line):
@@ -112,6 +113,7 @@ def scan_s1(only, rx, ctx, since, hits, seen):
                     try:
                         o = json.loads(line)
                     except Exception:
+                        bad += 1
                         continue
                     content = '\n'.join(texts(o))
                     m = rx.search(content)
@@ -127,6 +129,8 @@ def scan_s1(only, rx, ctx, since, hits, seen):
                                  'ts': ts, 'role': role, 'snippet': snip, 'layer': 'S1'})
             except OSError:
                 continue
+            if bad:
+                cli.warn_once('bad:' + p, f'{p}: 跳过 {bad} 行坏 JSON')
 
 
 def scan_s0(only, rx, ctx, since, hits, seen):

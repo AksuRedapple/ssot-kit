@@ -34,12 +34,13 @@ def _ts(s):
 
 def load_hits(days):
     cutoff = datetime.datetime.now().timestamp() - days * 86400
-    hits, logs = set(), 0
+    hits, logs, bad = set(), 0, 0
     try:
         for line in open(LOG, encoding='utf-8', errors='replace'):
             try:
                 d = json.loads(line)
             except Exception:
+                bad += 1
                 continue
             tool = str(d.get('tool', ''))
             if not (tool.startswith('sp_semantic') or tool == 'sp_search'):
@@ -60,6 +61,8 @@ def load_hits(days):
                     hits.add(m.group(1))
     except OSError:
         pass
+    if bad:
+        cli.warn_once('bad:' + LOG, f'{LOG}: 跳过 {bad} 行坏 JSON')
     return hits, logs
 
 

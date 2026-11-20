@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.27.0] - 2026-11-20 — 异常处理第二批：坏行计数
+
+- **feat(parse)**: `sp_candidates`（候选账本）、`sp_triage`（账本两处读取）、`sp_retire_candidates`（检索日志）、`sp_subagent`（子 agent 转录）、`sp_recall`（S1 扫描）、`sp_export`（meta 读取）遇到坏 JSON 时计数并用 `warn_once` 报到 stderr——不再静默跳过
+- **行为不变**: 坏行仍被跳过（不中断整批）；干净数据不产生任何新输出（`--json` 的 stdout 不受影响）
+- **test**: 新增 `test_bad_lines_warn.py`（坏行计数、`warn_once` 去重、干净输入零输出）
+
 ## [0.26.0] - 2026-11-20 — 异常处理第一批：状态写入与遥测
 
 - **feat(cli)**: 新增 `cli.warn_once(key, msg)`——同一 key 每进程只警告一次（可见但不刷屏）
