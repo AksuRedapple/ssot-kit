@@ -6,6 +6,7 @@
   - 向量包 noop / append / rebuild 三条路径都被走到（真实索引不会重写包）
   - doc/query 前缀成对定义，sp_index 与 sp_semantic 引用同一份布局实现
 """
+import importlib.util
 import json
 import os
 import shutil
@@ -21,6 +22,8 @@ TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, TOOLS)
 
 from ssotlib.index import embed, layout, pack  # noqa: E402
+
+HAS_NUMPY = importlib.util.find_spec('numpy') is not None
 
 
 def make_db(path, rows):
@@ -81,16 +84,21 @@ class TestPack(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_build_and_load(self):
+    def test_build_is_stdlib_only(self):
         n, _secs = pack.build_pack(self.db, self.vecs, self.ids, quiet=True)
         self.assertEqual(n, 3)
         self.assertEqual(os.path.getsize(self.vecs), 3 * 2 * 4)
         self.assertEqual(os.path.getsize(self.ids), 3 * 8)
         self.assertTrue(pack.pack_fresh(self.db, self.vecs, self.ids))
+
+    @unittest.skipUnless(HAS_NUMPY, 'numpy 不在：向量包读路径跳过（写路径仍测）')
+    def test_load(self):
+        pack.build_pack(self.db, self.vecs, self.ids, quiet=True)
         M, ids = pack.load_pack(self.vecs, self.ids)
         self.assertEqual(tuple(ids), (1, 2, 3))
         self.assertEqual(M.shape, (3, 2))
 
+    @unittest.skipUnless(HAS_NUMPY, 'numpy 不在：增量/压实路径需要 numpy')
     def test_incremental_paths(self):
         pack.build_pack(self.db, self.vecs, self.ids, quiet=True)
 
@@ -149,18 +157,21 @@ class TestEmbed(unittest.TestCase):
 
 
 class TestSingleTruth(unittest.TestCase):
-    def test_tools_share_layout(self):
+    def test_sp_index_shared_layout(self):
         import sp_index
-        import sp_semantic
         for name in ('active_version', 'resolve_db', 'list_versions',
                      'write_root_manifest', 'set_active', 'prune_versions'):
             self.assertIs(getattr(sp_index, name), getattr(layout, name), name)
         self.assertIs(sp_index._pack, pack)
+        self.assertEqual(sp_index.DOC_PREFIX, embed.DOC_PREFIX)
+
+    @unittest.skipUnless(HAS_NUMPY, 'numpy 不在：sp_semantic 导入即需要 numpy')
+    def test_sp_semantic_shared(self):
+        import sp_semantic
         self.assertIs(sp_semantic._layout, layout)
         self.assertIs(sp_semantic._embed, embed)
         self.assertEqual(sp_semantic.API, embed.API)
         self.assertEqual(sp_semantic.QUERY_PREFIX, embed.QUERY_PREFIX)
-        self.assertEqual(sp_index.DOC_PREFIX, embed.DOC_PREFIX)
         # sp_semantic 保留 daemon 注入点：load_pack 必须读 _PACK_OVERRIDE
         self.assertIsNone(sp_semantic._PACK_OVERRIDE)
 

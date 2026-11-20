@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.19.2] - 2026-11-20 — 测试可移植性修复
+
+- **fix(test)**: `test_ssotlib_index.py` 在无 numpy 的环境不再报错——向量包**写**路径（纯标准库）始终测，读/增量/压实与 `sp_semantic` 导入按 numpy 可用性跳过。CI 的 Python 3.12 没有 numpy，0.19.1 因此 3 个用例 error
+- **fix(test)**: kit 的 `run_all.sh` 失败时输出末尾 20 行（原 5 行会把 traceback 截掉，排障得重跑）
+
 ## [0.19.1] - 2026-11-20 — 分层重构 0.19.x：索引层共享件
 
 - **refactor(index)**: 新增 `tools/ssotlib/index/`——`layout.py`（版本目录 / active 指针 / 根 BUILD 清单）、`embed.py`（doc/query 前缀成对 + 批量/单条嵌入）、`pack.py`（向量包构建 / 增量 / 压实；numpy 惰性导入，安装面仍是纯标准库）
