@@ -1,4 +1,4 @@
-# kit 能力清单（v0.22.1 · 2026-11-20）
+# kit 能力清单（v0.23.0 · 2026-11-20）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -12,7 +12,8 @@
 向量包构建与压实（`pack.py`，numpy 只在真正读写向量包时导入）；`asserts.py` 唯一实现断言解析与
 体检计数；`candidates.py` 提供候选文本口径（归一化/2-gram/极性）；`policy.py` / `fingerprint.py` /
 `pending.py` 收敛索引线的策略、指纹与交接；`index/chunking.py` 是唯一切块实现；
-`sources.py` / `session_io.py` 收敛采集线的源发现与会话读取（三形状 + 系统注入过滤）。
+`sources.py` / `session_io.py` 收敛采集线的源发现与会话读取（三形状 + 系统注入过滤）；
+`ingest.py` 收敛脱敏/内容归一/时区（采集转换与归档共用）。
 
 > 依赖方向：`tools/*.py → ssotlib`。禁止工具之间互相 import，也禁止再复制 `ENTRY_RE`。
 

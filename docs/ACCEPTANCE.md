@@ -206,3 +206,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.sources` / `ssotlib.session_io` ← 5 个工具；6 处 importlib → `ssotlib.index.embed` |
 | 判据 | ① `sp_sources --json` 与迁移前逐字节一致 ② 三形状/系统注入统计回归通过 ③ 全仓不再有 `spec_from_file_location('sem'` ④ `m.embed(`/`m.QUERY_PREFIX` 归零 |
 | 反例 | 系统注入被算成用户消息（条数虚高）→ FAIL；跨 harness 出现空集 → FAIL；换模型端口后 embed 失败 → FAIL |
+
+## 23 采集线收口（v0.23.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 脱敏/内容归一不再长在转换器里被反向 import；密钥形态只有一份 |
+| 步骤 | `ssotlib.ingest` ← `sp_convert` / `sp_archive` / `sp_s0scan` / `sp_subagent` / `sp_recall` |
+| 判据 | ① 全仓无 `from sp_convert import`（字符串提及不算） ② 脱敏覆盖 sk/ghp/github_pat/AKIA/hf/bearer ③ 三形状归一与 UTC+8 有回归 ④ archive/s0scan/recall 既有测试全绿 |
+| 反例 | 新增一种密钥形态只改一处 → FAIL；`norm_content` 优先级变化（text 被 tool_use 盖住）→ FAIL |

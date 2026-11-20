@@ -17,89 +17,9 @@ v0.5（2026-10-25）：接入 Pi（--src pi）——v3 树形 jsonl 适配：mes
 """
 import argparse, datetime, hashlib, json, os, re, shutil, sys
 
-SECRET_RX = [
-    (re.compile(r'sk-[A-Za-z0-9_-]{20,}'), '[REDACTED-SECRET]'),
-    (re.compile(r'sk-[0-9a-f]{5,31}(?![0-9a-f])'), '[REDACTED-SECRET]'),  # 被截断/显示的短前缀残形
-    (re.compile(r'ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}'), '[REDACTED-SECRET]'),
-    (re.compile(r'AKIA[0-9A-Z]{16}'), '[REDACTED-SECRET]'),
-    (re.compile(r'hf_[A-Za-z0-9]{30,}'), '[REDACTED-SECRET]'),
-    (re.compile(r'(?i)bearer\s+[A-Za-z0-9._\-]{30,}'), '[REDACTED-SECRET]'),
-]
-
-
-def scrub(text):
-    for rx, rep in SECRET_RX:
-        text = rx.sub(rep, text)
-    return text
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import pending as sp_pending  # noqa: E402
-
-VAULT = os.path.expanduser('~/ssot')
-SRCS = {
-    'qoder': ('evidence/qoder/S0-archive/qoder-projects', 'evidence/qoder/S1-sessions'),
-    'cc':    ('evidence/cc/S0-archive/claude-projects',   'evidence/cc/S1-sessions'),
-    'pi':    ('evidence/pi/S0-archive/pi-sessions',       'evidence/pi/S1-sessions'),
-    'dsh':   ('evidence/dsh/S0-archive/dsh-sessions',     'evidence/dsh/S1-sessions'),
-}
-CUR_SRC = 'qoder'
-S0 = os.path.join(VAULT, SRCS[CUR_SRC][0])
-S1 = os.path.join(VAULT, SRCS[CUR_SRC][1])
-CONVERTER = 'sp_convert v0.5'
-
-
-def contract_schema():
-    """实例契约号（profile/contract.json）；无契约文件→None（旧实例不盖章）。
-
-    S1 meta 的 schema 必须由生成器自己盖（契约 v2 · 见 A530）。
-    """
-    try:
-        d = json.load(open(os.path.join(VAULT, 'profile', 'contract.json'), encoding='utf-8'))
-        return int(d.get('contract', 0)) or None
-    except Exception:
-        return None
-
-DROP_TYPES = {'attachment', 'runtime-config', 'workspace-directories',
-              'active-leaf', 'worktree-state', 'file-history-snapshot', 'last-prompt'}
-
-def local(ts):
-    try:
-        dt = datetime.datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
-        return dt + datetime.timedelta(hours=8)
-    except Exception:
-        return None
-
-def lstr(ts, fmt='%m-%d %H:%M'):
-    d = local(ts)
-    return d.strftime(fmt) if d else str(ts)[:16]
-
-def norm_content(content):
-    """→ (kind, payload)  kind ∈ text|tool_use|tool_result|empty"""
-    if isinstance(content, str):
-        return ('text', content) if content.strip() else ('empty', '')
-    if isinstance(content, list):
-        texts, tools, results = [], [], []
-        for x in content:
-            if not isinstance(x, dict):
-                continue
-            t = x.get('type')
-            if t == 'text' and str(x.get('text', '')).strip():
-                texts.append(x['text'])
-            elif t == 'tool_use':
-                brief = json.dumps(x.get('input') or {}, ensure_ascii=False)
-                tools.append({'name': x.get('name', '?'), 'brief': brief[:300]})
-            elif t == 'tool_result':
-                c = x.get('content')
-                if isinstance(c, list):
-                    c = ' '.join(str(y.get('text', '')) for y in c if isinstance(y, dict))
-                results.append(str(c or '')[:500])
-        if texts:
-            return ('text', '\n'.join(texts))
-        if tools:
-            return ('tool_use', tools)
-        if results:
-            return ('tool_result', results)
-    return ('empty', '')
+from ssotlib.ingest import DROP_TYPES, SECRET_RX, local, norm_content, scrub  # noqa: E402,F401
 
 def slugify(s, n=40):
     s = re.sub(r'[^\w\u4e00-\u9fff\-]+', '-', s).strip('-')

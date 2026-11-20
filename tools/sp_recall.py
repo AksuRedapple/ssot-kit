@@ -31,7 +31,7 @@ SSOT = sp_sources.SSOT
 ROLES = ('qoder', 'cc', 'dsh', 'pi', 'codex')
 
 try:
-    from sp_convert import scrub as _scrub
+    from ssotlib.ingest import scrub as _scrub
 except Exception:  # pragma: no cover
     def _scrub(s):
         return s

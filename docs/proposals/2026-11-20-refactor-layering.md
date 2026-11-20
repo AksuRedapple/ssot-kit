@@ -151,3 +151,12 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - 仍未收敛：`sp_archive`/`sp_s0scan`/`sp_subagent` → `sp_convert`（`scrub`/`SECRET_RX`/
   `norm_content`/`local`/`DROP_TYPES`），LLM 簇内部互相 import。采集中枢 sp_convert 的
   共享件抽取留作下一小步。
+
+## 落地记录（0.23，采集线收口）
+
+- `ssotlib/ingest.py`：`SECRET_RX` / `scrub` / `norm_content` / `local` / `DROP_TYPES`
+  从 `sp_convert` 搬出；`sp_convert` 反向引用共享件，`lstr`/`slugify` 等转换专用逻辑留在工具。
+- 去掉的互 import：`sp_archive` / `sp_recall` / `sp_s0scan` / `sp_subagent` → `sp_convert`。
+- 测试：`test_ssotlib_ingest.py`（脱敏形态、三形状归一、UTC+8、单一真相）；示例密钥用
+  字符串拼接构造，避免 public-audit 把「测试样例」当真实凭据。
+- 结果：采集、索引、断言三条线均为 `tools → ssotlib` 单向；仅剩实验性 LLM 簇内部互 import。

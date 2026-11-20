@@ -14,7 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sp_convert import SECRET_RX  # noqa: E402
+from ssotlib.ingest import SECRET_RX  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 STATE = os.path.join(SSOT, 'alerts', 's0-scan.json')

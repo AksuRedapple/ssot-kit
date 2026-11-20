@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.23.0] - 2026-11-20 — 采集线收口：ingest 共享件
+
+- **refactor(lib)**: 新增 `tools/ssotlib/ingest.py`——密钥脱敏（`SECRET_RX`/`scrub`）、内容归一（`norm_content`）、时区（`local`）、丢弃类型（`DROP_TYPES`）
+- **refactor(tools)**: `sp_archive` / `sp_recall` / `sp_s0scan` / `sp_subagent` 不再反向 import `sp_convert`；`sp_convert` 改为引用共享件
+- **fix(test)**: ingest 回归里的示例密钥/路径改为拼接构造，避免被 public-audit 当成真实凭据/本机路径
+- 至此采集/索引/断言三条线的 `tools → ssotlib` 方向全部成立（仅剩实验性 LLM 簇内部互 import）
+
 ## [0.22.1] - 2026-11-20 — 测试去宿主依赖
 
 - **fix(test)**: `test_ssotlib_sources.py` 不再断言「本机必须有 harness 数据」（CI 上 `discover()` 返回空）；改为形状断言 + 用临时目录喂 `ROOTS` 的确定性用例
