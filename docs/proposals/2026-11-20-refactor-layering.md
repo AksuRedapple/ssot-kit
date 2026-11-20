@@ -1,6 +1,6 @@
 # 升级候选 · 代码分层重构（ssotlib）
 
-> 2026-11-20 · 状态：candidate（0.19.0 起点）· 来源：0.18.0 审计
+> 2026-11-20 · 状态：P0 已落地（0.19.0）· 来源：0.18.0 审计
 
 ## 为什么要重构
 
@@ -70,3 +70,21 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 4. `ssotlib/cli.py`：`base_parser()`、`exit_code()`、dry-run 开关
 5. 改 `ssot_check.py` / `sp_purify.py` 引用上述模块，删本地副本
 6. 新增 `tools/tests/test_ssotlib_entries.py`、`test_ssotlib_store.py`
+
+## 落地记录（P0，0.19.0）
+
+- **目录落点修正**：共享层落在 `tools/ssotlib/`，不是仓库根 `ssotlib/`。
+  理由：`python3 tools/xxx.py` 的 `sys.path[0]` 就是 `tools/`，放这里 import 不需要每个入口
+  重复注入路径（那本身就是要消掉的重复）；安装脚本与 `kit_manifest.shipped` 也按 `tools/`
+  相对路径工作，零特殊处理。
+- `entries.py`：`ENTRY_RE` / `is_entry` / `has_marker` / `marker_count` / `pending_count` /
+  `head_marker_count` / `normalize_conf` / `parse_conf` / `inbox_stats`。
+- `store.py`：`read_json` / `iter_jsonl` / `read_jsonl`（坏行计数）/ `write_json_atomic` /
+  `write_jsonl_atomic` / `append_jsonl`。
+- `cli.py`：`base_parser` / `add_dry_run` / `exit_code` / `run`（0/1/2 三态）。
+- 已迁移：`ssot_check.py`、`sp_purify.py`（删本地副本，改为 re-export/引用）、
+  `sp_pending.py`（原子写改 `store`）。
+- 行为不变证据：同一夹具下，v0.18.0 与 0.19.0 的 `ssot_check` / `sp_purify` 输出与退出码
+  **逐字节一致**（P0 验收第 4 条）。
+- 遗留：`sp_dispatch` / `sp_handoff` 本轮未迁——它们没有条目解析副本，等 0.19.x 与
+  `index/` 一起处理；`tests/` 里的 `test_sp_purify.py` 保留（黑盒 CLI 行为）。

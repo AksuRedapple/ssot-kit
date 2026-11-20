@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog and the project uses semantic versioning.
 
+## [Unreleased]
+
+No unreleased changes yet.
+
+## [0.19.0] - 2026-11-20 — 分层重构 P0：ssotlib 共享层
+
+- **refactor(lib)**: 新增 `tools/ssotlib/`（纯标准库）——`entries.py` 条目/标记/conf 唯一实现、`store.py` JSON/JSONL 原子读写与坏行计数、`cli.py` 退出码三态与 dry-run 旗标
+- **refactor(tools)**: `ssot_check.py` / `sp_purify.py` 改引用 `ssotlib`，删掉各自的 `ENTRY_RE` / `is_entry` / `marker_count` / `normalize_conf` 副本；`sp_pending.py` 落盘改 `store.write_json_atomic`
+- **feat(cli)**: `sp_purify.py` 新增显式 `--dry-run`（即使带 `--apply` 也不写盘）；单调校验失败按仪器失败返回 2
+- **test(lib)**: 新增 `test_ssotlib_entries.py` / `test_ssotlib_store.py` / `test_ssotlib_cli.py`；含「单一真相」守卫（同一 `ENTRY_RE` 对象）
+- **fix(install)**: `setup.sh` / `update.sh` 同步 `tools/ssotlib/`；补齐 `sp_purify.py` 的 manifest 登记（0.18.0 漏登）
+
 ## [0.18.0] - 2026-11-20 — 提纯护栏与技能入仓
 
 - **feat(purify)**: 新增 `tools/sp_purify.py`——默认 dry-run；只处理未标记条目；`--remap` 才重算；`--apply` 前自动备份 `inbox/`；写完做标记数单调校验
@@ -9,10 +21,6 @@ All notable changes to this project are documented here. The format follows Keep
 - **feat(skills)**: 公开版 `skills/ssot-ops`（路由）与 `skills/ssot-toolbox`（工具手册），路径相对仓库根、已脱敏
 - **docs(proposals)**: 新增 `docs/proposals/2026-11-20-purify-guard.md` 与 `2026-11-20-skills-ssot-ops-toolbox.md`
 - **test**: 新增 `tools/tests/test_sp_purify.py`（只追加/备份/非条目不动/单调）
-
-## [Unreleased]
-
-No unreleased changes yet.
 
 ## [0.17.1] - 2026-11-19 — 修复 sp_semantic NameError
 

@@ -24,6 +24,15 @@ import re
 import subprocess
 import sys
 
+# 允许 import 使用（测试/调试），不只当脚本跑：把自身目录放进 sys.path
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+
+# 条目/标记/conf 的唯一实现在 ssotlib.entries（A558 单一真相）；此处再导出给既有调用方与测试。
+from ssotlib.entries import (CONF_PREFIXES, ENTRY_RE, head_marker_count, inbox_stats,  # noqa: E402
+                             is_entry, marker_count, normalize_conf, parse_conf, pending_count)
+
 # 与 sp_compile.HARD_LIMIT(25000) 对齐，告警线留 1000B 余量
 MEM_WARN = 24000
 
@@ -123,106 +132,6 @@ def fmt_ids(ids, cap=8):
         parts.append(str(ids[i]) if j == i else f'{ids[i]}-{ids[j]}')
         i = j + 1
     return ','.join(parts) + ('…' if i < len(ids) else '')
-
-
-CONF_PREFIXES = ('实测', '推断', '推算', '待核')
-
-
-def normalize_conf(value):
-    """把常见 conf 写法归一到四前缀；决定/用户令这类无置信度的行返回 None。
-
-    归一规则（2026-11-14 放宽，只认语义不认字面）：
-    - 实测：亲自跑过/亲眼看过 —— 实测、设备实测、代码、单测、源码、编译、现场、
-      对端实测（对方实测回执）、明示（来源明确陈述，非推断）、以及「0 ERROR / PASS / 全绿」这类检查结果
-    - 推断：文档核验 / 文档（照文档写的，没装机跑）
-    - 推算 / 待核：原样
-    """
-    v = (value or '').strip().strip('*').strip()
-    if not v:
-        return None
-    hits = []
-    for part in re.split(r'[+/，,、;；]', v):
-        p = part.strip().strip('*').strip()
-        if not p:
-            continue
-        if p.startswith(('实测', '设备实测', '代码', '单测', '编译', '现场', '对端实测', '源码', '明示')):
-            hits.append('实测')
-        elif re.search(r'0\s*ERROR|\bPASS\b|全绿|全过', p):
-            # conf 里写的是“检查结果”而不是置信度短语：按实测计入，别当非法值刷屏
-            hits.append('实测')
-        elif p.startswith('推算'):
-            hits.append('推算')
-        elif p.startswith(('推断', '文档')):
-            hits.append('推断')
-        elif p.startswith('待核'):
-            hits.append('待核')
-        # 决定 / 决策 / 用户令 / owner 是“谁定的”，不是置信度，直接不参与 conf
-    for x in ('实测', '推算', '推断', '待核'):
-        if x in hits:
-            return x
-    return None
-
-
-ENTRY_RE = re.compile(r'^-\s+(?:\d{4}-\d{2}-\d{2}\s+)?\[[A-Za-z_-]+\]')
-
-
-def is_entry(line):
-    """inbox 里只有「- [type] ...」或「- YYYY-MM-DD [type] ...」才算一条贡献；
-    结构化笔记（要点列表）不是条目，不计入未提纯。"""
-    return bool(ENTRY_RE.match(line))
-
-
-def marker_count(root):
-    """当前工作区里带 `→` 标记的条目数（只认条目行）。"""
-    n = 0
-    for p in glob.glob(os.path.join(root, 'inbox', '*.md')):
-        if os.path.basename(p) == 'README.md':
-            continue
-        for line in open(p, errors='replace'):
-            if is_entry(line) and '→' in line:
-                n += 1
-    return n
-
-
-def head_marker_count(root):
-    """HEAD 里的标记条目数；git 不可用/无 HEAD 时返回 None。"""
-    try:
-        out = subprocess.run(['git', '-C', root, 'grep', '-h', '→', 'HEAD', '--', 'inbox'],
-                             capture_output=True, text=True)
-        if out.returncode not in (0, 1):
-            return None
-        return sum(1 for l in out.stdout.splitlines() if is_entry(l) and '→' in l)
-    except Exception:
-        return None
-
-
-def inbox_stats(root):
-    total = conf = normalized = 0
-    bad = []
-    for p in glob.glob(os.path.join(root, 'inbox', '*.md')):
-        if os.path.basename(p) == 'README.md':
-            continue
-        for line in open(p, errors='replace'):
-            if not is_entry(line):
-                continue
-            total += 1
-            # (?<![\w.]) 防误命中文件名/配置键：`_meta/agents.conf:pi 行` 曾被当成 conf 值；
-            # 值到 `|`/`｜`/全角括号/反引号/换行即止，防正文里提到 `conf:` 时把后文整段吃成值
-            m = re.search(r'(?<![\w.])conf:\s*([^|｜（`\n]+)', line)
-            if m:
-                value = re.split(r'→', m.group(1))[0].strip()  # 去掉行尾 → 归位 标记
-                # 决定 / 决策 / 用户令 / owner 不是置信度字段；不计 bad，也不计入 conf
-                if value.startswith(('决定', '决策', '用户令', 'owner')):
-                    continue
-                nv = normalize_conf(value)
-                if nv:
-                    conf += 1
-                    if not value.startswith(CONF_PREFIXES):
-                        normalized += 1
-                else:
-                    bad.append(value)
-    return {'total': total, 'conf': conf, 'bad': bad, 'normalized': normalized}
-
 
 
 def capture_stats(root):
@@ -518,19 +427,17 @@ def main():
 
     # 2. inbox + conf
     ib = inbox_stats(root)
-    pending = sum(1 for p in glob.glob(os.path.join(root, 'inbox', '*.md'))
-                  if os.path.basename(p) != 'README.md'
-                  for l in open(p, errors='replace') if is_entry(l) and '→' not in l)
+    pending = pending_count(root)
     print(f"[inbox] 未提纯 {pending} 条" + ('（>20 条建议整理）' if pending > 20 else '') +
           f"；conf 覆盖 {ib['conf']}/{ib['total']}" +
           (f"；归一化 {ib['normalized']} 条" if ib['normalized'] else '') +
           (f"；非法值 {sorted(set(ib['bad']))}" if ib['bad'] else ''))
 
-    # 2a. 标记单调守卫（提纯只能追加，标记数不得回退）
+    # 2a. 标记单调守卫（A558：提纯只能追加，标记数不得回退）
     cur_m = marker_count(root)
     head_m = head_marker_count(root)
     if head_m is not None and cur_m < head_m:
-        print(f"[inbox-guard] ❌ 标记数回退：{cur_m} < HEAD {head_m}（先看 git diff，别 checkout）")
+        print(f"[inbox-guard] ❌ 标记数回退：{cur_m} < HEAD {head_m}（A558：先看 git diff，别 checkout）")
         issues += 1
     elif head_m is not None:
         print(f"[inbox-guard] 标记数 {cur_m}（HEAD {head_m}）")

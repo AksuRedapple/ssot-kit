@@ -21,6 +21,8 @@ import subprocess
 import sys
 import time
 
+from ssotlib import store
+
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 MARK = os.path.join(SSOT, 'S2-index', 'pending-index.json')
 LOCK = MARK + '.lock'
@@ -31,11 +33,7 @@ def now():
 
 
 def load():
-    try:
-        with open(MARK, encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    return store.read_json(MARK, {}) or {}
 
 
 def _with_lock(fn):
@@ -53,11 +51,7 @@ def _with_lock(fn):
 
 
 def _save(d):
-    tmp = MARK + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
-        f.write('\n')
-    os.replace(tmp, MARK)
+    store.write_json_atomic(MARK, d, indent=2, ensure_ascii=False)
 
 
 def merge(sessions=0, est_blocks=0, by_session=None, pack_stale=None):

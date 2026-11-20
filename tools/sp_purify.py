@@ -14,10 +14,7 @@
   python3 sp_purify.py                 # dry-run：看计划
   python3 sp_purify.py --apply         # 落盘（自动备份）
   python3 sp_purify.py --remap --apply # 重算已有标记（慎用）
-
-默认根 = 当前目录（可用 SSOT_ROOT 覆盖）。
 """
-import argparse
 import glob
 import os
 import re
@@ -25,7 +22,8 @@ import shutil
 import sys
 import time
 
-ENTRY_RE = re.compile(r'^-\s+(?:\d{4}-\d{2}-\d{2}\s+)?\[[A-Za-z_-]+\]')
+from ssotlib import cli
+from ssotlib.entries import ENTRY_RE, marker_count_files
 
 RULES = [
     ('knowledge/assertions.md', r'断言|A\d{3}|坑|取证|assertions'),
@@ -53,18 +51,10 @@ def dest(line, fname):
     return 'lines/mac-foundation.md'
 
 
-def count_markers(files):
-    n = 0
-    for f in files:
-        for l in open(f, encoding='utf-8', errors='replace'):
-            if ENTRY_RE.match(l) and '→' in l:
-                n += 1
-    return n
-
-
 def main():
-    ap = argparse.ArgumentParser(epilog='默认 dry-run；--apply 才写盘；已有标记默认不动（--remap 才重算）。')
-    ap.add_argument('--root', default=os.environ.get('SSOT_ROOT', os.getcwd()))
+    ap = cli.base_parser(
+        epilog='默认 dry-run；--apply 才写盘；已有标记默认不动（--remap 才重算）。')
+    cli.add_dry_run(ap, help_text='即使带 --apply 也只打印计划（显式 dry-run）')
     ap.add_argument('--apply', action='store_true', help='真正写盘（默认只打印计划）')
     ap.add_argument('--remap', action='store_true', help='重算已有标记（危险，A558）')
     ap.add_argument('--no-backup', action='store_true', help='不备份（不推荐）')
@@ -105,7 +95,7 @@ def main():
 
     if not plan:
         print('无变更'); return 0
-    if not args.apply:
+    if not args.apply or args.dry_run:
         print('\n[dry-run] 未写盘。确认无误后加 --apply（会先备份）。')
         return 0
 
@@ -115,7 +105,7 @@ def main():
         shutil.copytree(inbox, bdir, ignore=shutil.ignore_patterns('.staging'))
         print('备份：', bdir)
 
-    before = count_markers(files)
+    before = marker_count_files(files)
     by_file = {}
     for f, i, l, n in plan:
         by_file.setdefault(f, []).append((i, l, n))
@@ -127,14 +117,13 @@ def main():
                 continue
             lines[i - 1] = new
         open(f, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
-    after = count_markers(files)
+    after = marker_count_files(files)
     print(f'标记数：{before} → {after}')
     if after < before:
-        print('❌ 单调校验失败：标记数减少，请从备份恢复', file=sys.stderr)
-        return 2
+        raise cli.InstrumentError('单调校验失败：标记数减少，请从备份恢复')
     print('✅ 完成（标记数只增不减）')
     return 0
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    raise SystemExit(cli.run(main))

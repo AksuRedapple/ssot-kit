@@ -161,3 +161,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `sp_convert` → `sp_pending --status` → `sp_index --plan --json` → `sp_pending --decide` → steward |
 | 判据 | ① convert 后 marker 存在且含 sessions/est_blocks ② plan 有精确 pending_blocks ③ 超阈值/窗口外 defer ④ 索引成功后 marker 清 ⑤ `--no-pack` 保留 pack_stale |
 | 反例 | 大索引仍被 steward 无条件执行 → FAIL；索引期间新转换被 marker 清除吞掉 → FAIL |
+
+## 18 ssotlib 共享层（P0，v0.19.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 条目/标记/conf 只有一份实现（A558 根因），tools 不再互相 import |
+| 步骤 | `ssotlib.entries` / `store` / `cli` ← `ssot_check.py` / `sp_purify.py` / `sp_pending.py` 引用 |
+| 判据 | ① `ssot_check.ENTRY_RE is entries.ENTRY_RE` 且 `sp_purify` 同 ② `test_ssotlib_*` 全绿 ③ 新旧 `ssot_check`/`sp_purify` 输出逐字节一致 ④ 影子实例 setup 后能 import ssotlib |
+| 反例 | 任一工具里再出现本地 `ENTRY_RE`/`is_entry` → FAIL；安装后 `ModuleNotFoundError: ssotlib` → FAIL |
