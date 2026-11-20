@@ -57,8 +57,8 @@ def log_op(rec):
         with open(LOG, 'a', encoding='utf-8') as f:
             f.write(json.dumps(rec, ensure_ascii=False) + '\n')
         os.chmod(LOG, 0o600)
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        cli.warn_once('classify-log', f'分类日志写入失败（{LOG}）：{e}')
 
 
 def init_policy():

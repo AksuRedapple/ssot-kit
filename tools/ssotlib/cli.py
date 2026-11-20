@@ -26,6 +26,17 @@ def exit_code(exc):
     return EXIT_INSTRUMENT if isinstance(exc, InstrumentError) else EXIT_FAIL
 
 
+_WARNED = set()
+
+
+def warn_once(key, msg):
+    """同一 key 每次进程只警告一次（日志/遥测失败要可见，但不能刷屏）。"""
+    if key in _WARNED:
+        return
+    _WARNED.add(key)
+    print(f'⚠ {msg}', file=sys.stderr)
+
+
 def base_parser(description=None, epilog=None, prog=None, root=True):
     """统一 argparse 基座；`root=True` 时带 `--root`（默认 ~/ssot）。"""
     ap = argparse.ArgumentParser(description=description, epilog=epilog, prog=prog,

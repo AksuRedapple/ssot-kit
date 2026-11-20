@@ -47,8 +47,8 @@ def log_event(e):
         os.makedirs(os.path.dirname(EVENTS), exist_ok=True)
         with open(EVENTS, 'a', encoding='utf-8') as f:
             f.write(json.dumps(e, ensure_ascii=False) + '\n')
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        cli.warn_once('assert-events', f'断言事件日志写入失败：{exc}')
 
 
 def scan(as_json=False):

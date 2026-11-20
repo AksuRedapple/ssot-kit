@@ -233,3 +233,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `cli.base_parser(epilog=…, root=False)` 替换 56 处 `argparse.ArgumentParser(…RawDescriptionHelpFormatter)` |
 | 判据 | ① 迁移前后 56 个 `--help` 逐字节一致（含退出码） ② 工具参数零改动 ③ 私有/kit 两套测试全绿 |
 | 反例 | 某个工具的 help 文本或退出码变化 → FAIL；`base_parser` 默认加了 `--root` 导致参数冲突 → FAIL |
+
+## 26 异常处理第一批（v0.26.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 静默异常不是一刀切：状态写入失败必须响，遥测失败可见但不阻断 |
+| 步骤 | `cli.warn_once`；`write_build`/`touch_build` 抛 `InstrumentError`；7 个工具的日志改 warn_once |
+| 判据 | ① BUILD 路径不可写时 `write_build` 抛 InstrumentError ② 日志不可写时主流程仍成功、stderr 只警告一次 ③ 其余行为不变 |
+| 反例 | BUILD 写失败仍打印「✅ 全量完成」→ FAIL；日志失败让检索/分发失败 → FAIL；每次调用都刷警告 → FAIL |

@@ -51,6 +51,17 @@ class TestRun(unittest.TestCase):
         self.assertEqual(cli.exit_code(cli.InstrumentError('x')), 2)
         self.assertEqual(cli.exit_code(ValueError('x')), 1)
 
+    def test_warn_once(self):
+        cli._WARNED.clear()
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            cli.warn_once('k', '第一次')
+            cli.warn_once('k', '第二次')
+            cli.warn_once('k2', '另一条')
+        out = err.getvalue()
+        self.assertEqual(out.count('第一次'), 1)
+        self.assertNotIn('第二次', out)
+        self.assertIn('另一条', out)
+
     def test_system_exit_passes_through(self):
         def f():
             raise SystemExit(1)

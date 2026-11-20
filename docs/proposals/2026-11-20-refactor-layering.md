@@ -186,3 +186,24 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - 实现坑：Python AST 的 `col_offset` 是 **UTF-8 字节偏移**，不是字符偏移。按字符拼接会
   在多字节行上错位；第一版因此把 `) \n` 吃掉、被 `ast.parse` 拦下（未写盘），改用字节切片后正常。
 - 工具互 import 与 argparse 两项审计债至此收口。
+
+## 落地记录（0.26，异常处理第一批）
+
+审计口径复核：私有侧 `except Exception` 共 220 处（无裸 `except:`），其中 151 处是
+「静默」（`pass`/`continue`/返回默认值）。但**静默 ≠ 有害**，按 try 里的操作分三类：
+
+| 类 | 数量（约） | 处置 |
+|---|---|---|
+| 循环里逐行解析失败 → `continue` | 48 | 批量数据噪声，后续加坏行计数（未做） |
+| 配置/旧值读取失败 → 默认值 | ~40 | 文件缺失属正常；损坏应告警（未做） |
+| 状态写入 / 遥测写入失败 → `pass` | ~12 | **本批处理** |
+| 探测（subprocess/HTTP）失败 → 默认值 | ~20 | 区分「没在跑」与「出错」（未做） |
+
+本批只动最危险的一组：
+
+- 状态写入（BUILD 清单）：`sp_index.write_build`、`sp_exit.touch_build` 改为抛
+  `cli.InstrumentError`（退出码 2）。依据：写失败却继续，会让 daemon/体检读到旧清单。
+- 遥测/审计日志：`sp_semantic` / `sp_search` / `sp_classify` / `sp_exit` / `sp_dispatch` /
+  `sp_assert_meta` / `sp_mail` 改为 `cli.warn_once`，主流程仍不因日志失败而中断。
+- 明确保留静默的：锁信息 `stamp`（诊断）、版本 STATUS 文件（advisory）、旧 meta 读取
+  （缺字段只是少保留分类）、逐行解析（噪声）。

@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.26.0] - 2026-11-20 — 异常处理第一批：状态写入与遥测
+
+- **feat(cli)**: 新增 `cli.warn_once(key, msg)`——同一 key 每进程只警告一次（可见但不刷屏）
+- **fix(state)**: `sp_index.write_build` / `sp_exit.touch_build` 的写失败不再静默：抛 `cli.InstrumentError`（退出码 2）。BUILD 清单写不进去却继续，等于索引状态说谎
+- **fix(telemetry)**: `sp_semantic` / `sp_search` / `sp_classify` / `sp_exit` / `sp_dispatch` / `sp_assert_meta` / `sp_mail` 的日志与通知失败改为 `warn_once` 打到 stderr——主流程仍不受影响
+- **test(cli)**: `warn_once` 去重行为有回归
+
 ## [0.25.0] - 2026-11-20 — argparse 收口
 
 - **refactor(cli)**: 56 个工具（含未发布的私有工具）的 `argparse.ArgumentParser(epilog=..., formatter_class=RawDescriptionHelpFormatter)` 改为 `ssotlib.cli.base_parser(epilog=..., root=False)`；工具自己的参数一个不动

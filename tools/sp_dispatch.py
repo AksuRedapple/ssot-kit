@@ -152,8 +152,8 @@ def log_use(level, budget, tokens, lines, preset=None, harness='dsh'):
                 'lines': lines, 'preset': preset, 'harness': harness,
                 'cwd': os.getcwd(),
             }, ensure_ascii=False) + '\n')
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        cli.warn_once('dispatch-log', f'派工日志写入失败：{e}')
 
 
 def render(level, pages, budget):

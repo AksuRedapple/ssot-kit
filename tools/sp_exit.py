@@ -183,8 +183,8 @@ def touch_build(db):
                 json.dump(d, f, ensure_ascii=False, indent=2)
                 f.write('\n')
             os.replace(tmp, p)
-        except Exception:
-            pass
+        except (OSError, TypeError, ValueError) as e:
+            raise cli.InstrumentError(f'无法更新 BUILD 清单 {p}：{e}')
 
 
 def log_op(rec):
@@ -193,8 +193,8 @@ def log_op(rec):
         with open(OPS, 'a', encoding='utf-8') as f:
             f.write(json.dumps(rec, ensure_ascii=False) + '\n')
         os.chmod(OPS, 0o600)
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        cli.warn_once('ops-log', f'操作日志写入失败（{OPS}）：{e}')
 
 
 def retire(manifest, sids, reason, operator, apply=False, as_json=False):

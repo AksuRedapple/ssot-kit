@@ -42,6 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
 from ssotlib import fingerprint as sp_fingerprint  # noqa: E402
 from ssotlib import asserts as sp_assert_lib  # noqa: E402
+from ssotlib import cli  # noqa: E402
 from ssotlib import pending as sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
@@ -265,8 +266,8 @@ def write_build(preserve_policy=False):
         with open(target, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
             f.write('\n')
-    except Exception:
-        pass
+    except (OSError, TypeError, ValueError) as e:
+        raise cli.InstrumentError(f'无法写 BUILD 清单 {target}：{e}')
 
 
 def file_corpus_files():
@@ -512,8 +513,8 @@ def apply_policy(con, skipped, operator='sp_index'):
                                 'op': 'apply-policy', 'version': active_version(),
                                 'db': DB, 'operator': operator,
                                 'paths': paths, 'blocks_removed': n}, ensure_ascii=False) + '\n')
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        cli.warn_once('index-ops-log', f'索引操作日志写入失败：{e}')
     return n
 
 
@@ -648,8 +649,8 @@ def _try_lock(fd):
             with open(lock_path, 'w', encoding='utf-8') as f:
                 json.dump({'pid': os.getpid(), 'started': time.time(),
                            'argv': ' '.join(sys.argv)}, f)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            cli.warn_once('lock-stamp', f'锁信息写入失败：{e}')
 
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

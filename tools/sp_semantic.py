@@ -80,8 +80,8 @@ def log_call(tool, query, n, top1, ms, status='ok', extra=None):
         with open(LOG, 'a', encoding='utf-8') as f:
             f.write(json.dumps(rec, ensure_ascii=False) + '\n')
         os.chmod(LOG, 0o600)
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        cli.warn_once('search-log', f'检索日志写入失败（{LOG}）：{e}')
 
 
 def build_commit():
