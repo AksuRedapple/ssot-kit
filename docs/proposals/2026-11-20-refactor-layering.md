@@ -106,3 +106,20 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
   DB/向量包/BUILD 的 size+mtime+首尾校验和未变。
 - 遗留：`sp_pending` 已在 0.19.0 用 `store`；`sp_index` 仍 import `sp_policy` /
   `sp_fingerprint` / `sp_assert_lib`（属 0.20 的 asserts/candidates 迁移）。
+
+## 落地记录（0.20，断言与候选）
+
+- `ssotlib/asserts.py`：`HEAD_RX` / `NUM_RX` / `ID_RX` / `STATUS_RX` / `SUP_RX` / `TAG_RX`、
+  `parse` / `parse_text` / `ids` / `numbers` / `reserved_ids` / `lint`；`sp_assert_lib.py`
+  降为兼容薄壳（旧导入名不变）。
+- `ssotlib/candidates.py`：`norm` / `fp` / `tokens` / `jaccard` / `overlap` / `polarity` /
+  `clean_claim` / `rstrip_lines` / `is_junk` / `sentences`（`NEG_RX` / `POS_RX` 同文件，
+  保持「先否后肯」口径）。
+- 删掉的重复：`ssot_check`、`sp_assert_alloc`、`sp_compile` 三处本地 `^## A` 正则；
+  `sp_assert_audit` / `sp_assert_meta` / `sp_index` 的 `sp_assert_lib` 工具间 import。
+- `sp_candidate_dedup` 改用 `ssotlib.index.embed.embed_one`，不再 importlib 加载 965 行的
+  `sp_semantic.py`。
+- 行为不变：同一夹具下 `ssot_check` 输出逐字节一致（含 dup/missing/reserved/标签口径）；
+  断言相关回归（audit/meta/supersede/index/alloc）全绿。
+- 工具互 import 现状（本次后）：`sp_index` 仍 import `sp_policy` / `sp_fingerprint` /
+  `sp_pending`；`sp_supersede` import `sp_assert_meta`——留待后续小步收敛。

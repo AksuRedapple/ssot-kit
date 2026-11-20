@@ -15,6 +15,8 @@ v0.1（2026-10-13）：SSOT 段生成。
 """
 import os, re, sys, shutil, datetime, subprocess, json, hashlib
 
+from ssotlib import asserts  # noqa: E402
+
 SSOT    = os.path.expanduser('~/ssot')
 COMPILE = os.path.join(SSOT, 'compile')
 Q_MEM   = os.path.expanduser('~/.qoder/memory/MEMORY.md')
@@ -51,7 +53,7 @@ def chunks_label():
 def a_max():
     try:
         txt = open(os.path.join(SSOT, 'knowledge', 'assertions.md')).read()
-        ns = [int(m) for m in re.findall(r'^## A(\d+)', txt, re.M)]
+        ns = asserts.numbers(txt)
         return max(ns) if ns else '-'
     except Exception:
         return '-'

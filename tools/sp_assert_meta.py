@@ -17,7 +17,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sp_assert_lib import parse, CITE_RX  # noqa: E402
+from ssotlib.asserts import CITE_RX, parse  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')

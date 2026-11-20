@@ -24,7 +24,7 @@ import sp_index  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
-from sp_assert_lib import parse, CITE_RX  # noqa: E402
+from ssotlib.asserts import CITE_RX, parse  # noqa: E402
 
 
 def citations(ids):

@@ -41,7 +41,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sp_policy  # noqa: E402
 import sp_fingerprint  # noqa: E402
-import sp_assert_lib  # noqa: E402
+from ssotlib import asserts as sp_assert_lib  # noqa: E402
 import sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))

@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.20.0] - 2026-11-20 — 分层重构 0.20：断言与候选共享件
+
+- **refactor(asserts)**: 新增 `tools/ssotlib/asserts.py`——断言解析（A 编号/状态/标签/取代）、`ids()`/`numbers()`、体检计数 `lint()`、预留编号；`sp_assert_lib.py` 降为兼容薄壳
+- **refactor(candidates)**: 新增 `tools/ssotlib/candidates.py`——归一化/指纹/2-gram/jaccard/重叠系数/极性（先否后肯）/句子切分
+- **refactor(tools)**: `ssot_check` 断言体检、`sp_assert_alloc`、`sp_compile`、`sp_assert_audit`、`sp_assert_meta`、`sp_index`、`sp_candidates` 改用共享件，删掉 4 处本地 `^## A` 解析；`sp_candidate_dedup` 不再 importlib 加载 `sp_semantic`（改用 `ssotlib.index.embed`）
+- **test**: 新增 `test_ssotlib_asserts.py` / `test_ssotlib_candidates.py`（含单一真相守卫）；`test_sp_embed_autotune.py` 的 5% 并发策略改为纯函数用例，端到端不再依赖计时噪声（修既有 flake）
+
 ## [0.19.2] - 2026-11-20 — 测试可移植性修复
 
 - **fix(test)**: `test_ssotlib_index.py` 在无 numpy 的环境不再报错——向量包**写**路径（纯标准库）始终测，读/增量/压实与 `sp_semantic` 导入按 numpy 可用性跳过。CI 的 Python 3.12 没有 numpy，0.19.1 因此 3 个用例 error

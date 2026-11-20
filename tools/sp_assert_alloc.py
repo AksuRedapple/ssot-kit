@@ -12,6 +12,8 @@
 """
 import argparse, fcntl, glob, json, os, re, sys
 
+from ssotlib import asserts  # noqa: E402
+
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
 STATE = os.path.join(SSOT, 'profile', '.assert-alloc.json')
@@ -22,7 +24,7 @@ def _max_in_file():
     if not os.path.exists(ASSERT):
         return 0
     txt = open(ASSERT, encoding='utf-8', errors='replace').read()
-    nums = [int(m) for m in re.findall(r'^## A(\d+)', txt, re.M)]
+    nums = asserts.numbers(txt)
     return max(nums) if nums else 0
 
 

@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "tools" / "sp_embed_autotune.py"
+sys.path.insert(0, str(ROOT / "tools"))
 
 
 class H(BaseHTTPRequestHandler):
@@ -46,8 +47,28 @@ def run(env, *args):
     return subprocess.run([sys.executable, str(TOOL), *args], capture_output=True, text=True, env=env)
 
 
+def check_policy(fails):
+    """并发策略是纯函数，用确定性的 throughput 行数据测（不依赖计时噪声）。"""
+    import sp_embed_autotune as M
+
+    def rows(two):
+        return [{"batch": 64, "workers": 1, "throughput": 100.0},
+                {"batch": 64, "workers": 2, "throughput": two}]
+
+    cases = [(104.0, 1), (105.0, 2), (106.0, 2), (100.0, 1)]
+    for two, want in cases:
+        got = M.choose_client({"rows": rows(two)})
+        if not got or got.get("workers") != want:
+            fails.append(f"choose_client(2w={two}) → {got}，期望 workers={want}")
+    # 只有单并发候选时照旧
+    got = M.choose_client({"rows": [{"batch": 64, "workers": 1, "throughput": 100.0}]})
+    if not got or got.get("workers") != 1:
+        fails.append(f"单行 choose_client → {got}")
+
+
 def main():
     fails = []
+    check_policy(fails)
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -88,8 +109,10 @@ def main():
                 p = d["profile"]
                 if p.get("source") != "bench" or p.get("measured", {}).get("mode") != "bench":
                     fails.append(f"profile 来源不对: {p.get('source')}")
-                if p["client"]["workers"] != 1:
-                    fails.append(f"无 >5% 收益时应回 workers=1: {p['client']}")
+                # 并发是否采纳由 choose_client 的策略决定，这里只验管道写对了；
+                # 5% 阈值在 test_choose_client_policy 里用确定性数据精确测。
+                if p["client"]["workers"] not in (1, 2):
+                    fails.append(f"workers 非法: {p['client']}")
 
             first = prof.read_bytes()
             r = run(env, "--probe", "--json", "--port", str(port))

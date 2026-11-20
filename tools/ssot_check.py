@@ -30,6 +30,7 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 # 条目/标记/conf 的唯一实现在 ssotlib.entries（A558 单一真相）；此处再导出给既有调用方与测试。
+from ssotlib import asserts  # noqa: E402
 from ssotlib.entries import (CONF_PREFIXES, ENTRY_RE, head_marker_count, inbox_stats,  # noqa: E402
                              is_entry, marker_count, normalize_conf, parse_conf, pending_count)
 
@@ -86,36 +87,9 @@ def find_build(root):
     return None, {}
 
 
-def _reserved_ids(root):
-    try:
-        d = json.load(open(os.path.join(root, 'profile', '.assert-alloc.json'), encoding='utf-8'))
-        return set(int(x) for x in d.get('reserved', []))
-    except Exception:
-        return set()
-
-
 def assertion_lint(root):
-    p = os.path.join(root, 'knowledge', 'assertions.md')
-    if not os.path.exists(p):
-        return {'total': 0}
-    txt = open(p, errors='replace').read()
-    ids = re.findall(r'^## A(\d+)([a-z]?)', txt, re.M)
-    nums = [int(n) for n, _suf in ids]
-    if not nums:
-        return {'total': 0}
-    full = [f'A{n}{s}' for n, s in ids]
-    seen = set(nums)
-    counts = collections.Counter(full)
-    return {
-        'total': len(nums),
-        'latest': max(nums),
-        'dups': len(full) - len(set(full)),
-        'dup_ids': sorted(k for k, v in counts.items() if v > 1),
-        'missing': len([i for i in range(1, max(nums) + 1)
-                        if i not in seen and i not in _reserved_ids(root)]),
-        'missing_ids': [i for i in range(1, max(nums) + 1) if i not in seen],
-        'tags': len(re.findall(r'标签[:：]', txt)),
-    }
+    """断言体检（解析与计数都在 ssotlib.asserts，只有一份实现）。"""
+    return asserts.lint(root)
 
 
 def fmt_ids(ids, cap=8):
@@ -334,7 +308,7 @@ def verify_lint(root):
     txt = open(p, encoding='utf-8', errors='replace').read()
     cur, out = None, []
     for ln in txt.splitlines():
-        m = __import__('re').match(r'^## A(\d+)', ln)
+        m = asserts.NUM_RX.match(ln)
         if m:
             cur = 'A' + m.group(1)
         m2 = __import__('re').match(r'^verify:\s*`(.+)`\s*$', ln)

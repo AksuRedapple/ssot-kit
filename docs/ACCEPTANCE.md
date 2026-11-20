@@ -179,3 +179,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.index.{layout,embed,pack}` ← `sp_index` / `sp_semantic` 引用；`sp_pending` 走 `store` |
 | 判据 | ① 8 条查询输出逐字节一致 ② `sp_index --plan --json` 全等 ③ golden 5/5 ④ DB/pack/BUILD 未写（size+mtime+校验和） ⑤ 向量包 noop/append/rebuild 三路有测试 ⑥ daemon `_PACK_OVERRIDE` 仍生效 |
 | 反例 | 检索分数或命中路径变化 → FAIL；跑一次查询就重写向量包 → FAIL；daemon 注入被绕过 → FAIL |
+
+## 20 断言与候选共享件（v0.20.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 断言解析与候选文本口径各只有一份；去掉「为一个函数 import 整个工具」 |
+| 步骤 | `ssotlib.asserts` / `ssotlib.candidates` ← `ssot_check`/`sp_assert_*`/`sp_compile`/`sp_index`/`sp_candidates`/`sp_candidate_dedup` |
+| 判据 | ① `ssot_check` 输出与迁移前逐字节一致 ② 断言回归（audit/meta/supersede/index/alloc）全绿 ③ `ASSERT_A`/`CITE` 等旧导入名仍可用 ④ `sp_candidate_dedup` 源码里不再出现 `sp_semantic` |
+| 反例 | 缺号统计不再排除预留编号 → FAIL；A515b 被当重复 → FAIL；候选极性判反（否定句当肯定）→ FAIL |
