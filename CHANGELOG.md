@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.22.1] - 2026-11-20 — 测试去宿主依赖
+
+- **fix(test)**: `test_ssotlib_sources.py` 不再断言「本机必须有 harness 数据」（CI 上 `discover()` 返回空）；改为形状断言 + 用临时目录喂 `ROOTS` 的确定性用例
+- 0.22.0 的代码本身无问题，仅该测试在干净机器上会失败
+
 ## [0.22.0] - 2026-11-20 — 采集线去环：sources / session_io / 嵌入调用
 
 - **refactor(lib)**: 新增 `ssotlib/sources.py`（会话源发现，原 `sp_sources`）与 `ssotlib/session_io.py`（会话读取唯一入口：CC/Codex/S1 三形状 + 系统注入过滤）

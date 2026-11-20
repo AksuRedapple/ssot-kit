@@ -98,12 +98,31 @@ class TestSources(unittest.TestCase):
         self.assertLess(sources.parse_since('30d'), sources.parse_since('2d'))
 
     def test_discover_shape(self):
+        # 宿主有没有 harness 数据都成立：只验返回形状
         rows = sources.discover()
-        self.assertTrue(rows)
+        self.assertIsInstance(rows, list)
         for r in rows:
-            self.assertEqual(set(r) >= {'src', 'role', 'kind', 'sessions', 'files', 'bytes'},
-                             True)
+            self.assertTrue(set(r) >= {'src', 'role', 'kind', 'sessions', 'files', 'bytes'})
             self.assertIsInstance(r['roots'], list)
+
+    def test_discover_with_temp_root(self):
+        # 用临时目录喂 ROOTS，不依赖本机 harness
+        with tempfile.TemporaryDirectory() as td:
+            os.makedirs(os.path.join(td, 'proj'))
+            with open(os.path.join(td, 'proj', 'a.jsonl'), 'w', encoding='utf-8') as f:
+                f.write('{}\n')
+            old = sources.ROOTS
+            sources.ROOTS = [('qoder', 'human', 'jsonl', [(td, 'evidence/qoder/S0')])]
+            try:
+                rows = sources.discover({'qoder'})
+            finally:
+                sources.ROOTS = old
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual(r['src'], 'qoder')
+        self.assertEqual(r['files'], 1)
+        self.assertGreaterEqual(r['bytes'], 1)
+        self.assertEqual(r['roots'][0]['dest'], 'evidence/qoder/S0')
 
     def test_single_truth(self):
         import sp_archive
