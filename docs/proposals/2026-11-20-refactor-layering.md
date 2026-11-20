@@ -1,0 +1,72 @@
+# 升级候选 · 代码分层重构（ssotlib）
+
+> 2026-11-20 · 状态：candidate（0.19.0 起点）· 来源：0.18.0 审计
+
+## 为什么要重构
+
+0.18.0 审计的量化现状：
+
+| 指标 | 数值 |
+|---|---|
+| 工具数 | 46 |
+| 总行数 | 11,264 |
+| 自带 `argparse` | 39 |
+| 重复 JSON 读写点 | 80 |
+| 工具互相 import | 16 |
+| 最大文件 | `sp_index.py` 1185 / `sp_semantic.py` 965 / `ssot_check.py` 750 |
+
+直接症状：`is_entry` / 标记解析在 `ssot_check` 与 `sp_purify` 各有一份，改一处漏一处（A558 事故的根因）。
+
+## 目标结构
+
+```
+ssotlib/                 # 纯标准库，无第三方依赖
+  paths.py               # root / config / env 解析
+  entries.py             # 条目、标记、conf 解析（is_entry 唯一实现）
+  store.py               # jsonl/json 原子读写、坏行计数、schema
+  index/                 # 版本目录、manifest、分块、嵌入
+  asserts.py             # 断言解析（现 sp_assert_lib 升级）
+  cli.py                 # 统一 argparse、退出码 0/1/2
+tools/*.py               # 只做参数映射 + 调 ssotlib
+```
+
+依赖方向：`tools → ssotlib`；**禁止 tools 互相 import**。
+
+## 五条设计原则
+
+1. **单一真相**：条目解析只有 `entries.py` 一处。
+2. **写操作默认 dry-run**：备份 + 单调校验（`sp_purify.py` 是样板）。
+3. **失败显性**：禁止裸 `except: pass`，至少计数/落日志。
+4. **退出码三态**：0 成功 / 1 产品失败 / 2 仪器失败。
+5. **纯标准库**：公开仓不引第三方依赖。
+
+## 迁移计划（strangle，不重写）
+
+| 阶段 | 内容 | 风险 | 验收 |
+|---|---|---|---|
+| **0.19.0** | `entries.py` + `store.py` + `cli.py`；先迁 `ssot_check` / `sp_purify` / `sp_dispatch` / `sp_handoff` | 低 | 单测 + 现有 kit tests 全绿 |
+| 0.19.x | `index/`（`sp_index` + `sp_semantic` + `sp_pending`） | 中高 | golden 回归 + 索引块数/检索命中不变 |
+| 0.20 | `asserts.py` + candidates | 中 | 断言体检输出不变 |
+
+## 验收判据（每阶段）
+
+1. `tools/tests/run_all.sh` 全绿
+2. `scripts/public-audit.sh` clean
+3. `scripts/preflight.sh` 影子实例全绿
+4. 行为不变：关键 CLI 输出/退出码与迁移前一致（抽样对比）
+5. 新增模块有单测；`tools/` 里不再有重复实现
+
+## 非目标
+
+- 不改公开 CLI 参数与退出码语义
+- 不引入第三方依赖
+- 不重写工具逻辑，只搬移与收敛
+
+## 第一批（P0）落地清单
+
+1. `ssotlib/__init__.py`
+2. `ssotlib/entries.py`：`ENTRY_RE`、`is_entry()`、`marker_count()`、`conf` 解析
+3. `ssotlib/store.py`：`read_jsonl()`、`write_json_atomic()`、坏行计数
+4. `ssotlib/cli.py`：`base_parser()`、`exit_code()`、dry-run 开关
+5. 改 `ssot_check.py` / `sp_purify.py` 引用上述模块，删本地副本
+6. 新增 `tools/tests/test_ssotlib_entries.py`、`test_ssotlib_store.py`
