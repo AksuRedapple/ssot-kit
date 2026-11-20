@@ -33,7 +33,7 @@ def scrub(text):
     return text
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_pending  # noqa: E402
+from ssotlib import pending as sp_pending  # noqa: E402
 
 VAULT = os.path.expanduser('~/ssot')
 SRCS = {

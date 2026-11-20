@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.21.0] - 2026-11-20 — 索引线去环：policy / fingerprint / pending / chunking
+
+- **refactor(lib)**: 新增 `ssotlib/policy.py`（索引生命周期策略）、`ssotlib/fingerprint.py`（嵌入环境指纹）、`ssotlib/pending.py`（采集→索引交接核心）、`ssotlib/index/chunking.py`（切块）
+- **refactor(tools)**: `sp_index` / `sp_coverage` / `sp_classify` / `sp_exit` / `sp_retire_candidates` / `sp_embed_bench` / `sp_convert` / `sp_assert_audit` 改用共享件；`sp_policy.py` / `sp_fingerprint.py` 降为兼容薄壳，`sp_pending.py` 只剩 CLI
+- **fix(arch)**: 去掉 `sp_assert_audit → sp_index` 的重依赖（只为一个 `chunk_file` 导入 1185 行索引器）
+- **行为不变**: `sp_index --plan --json`、`sp_pending --decide --json`、`sp_coverage --json`、策略摘要/硬件指纹与迁移前逐字节一致
+
 ## [0.20.0] - 2026-11-20 — 分层重构 0.20：断言与候选共享件
 
 - **refactor(asserts)**: 新增 `tools/ssotlib/asserts.py`——断言解析（A 编号/状态/标签/取代）、`ids()`/`numbers()`、体检计数 `lint()`、预留编号；`sp_assert_lib.py` 降为兼容薄壳

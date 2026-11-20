@@ -123,3 +123,18 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
   断言相关回归（audit/meta/supersede/index/alloc）全绿。
 - 工具互 import 现状（本次后）：`sp_index` 仍 import `sp_policy` / `sp_fingerprint` /
   `sp_pending`；`sp_supersede` import `sp_assert_meta`——留待后续小步收敛。
+
+## 落地记录（0.21，索引线去环）
+
+- 新增 `ssotlib/policy.py`（原 `sp_policy` 全量搬移）、`ssotlib/fingerprint.py`、
+  `ssotlib/pending.py`（原 `sp_pending` 去掉 CLI 的核⼼）、`ssotlib/index/chunking.py`
+  （原 `sp_index.chunk_file`）。
+- 薄壳：`sp_policy.py` / `sp_fingerprint.py` 只 re-export；`sp_pending.py` 只保留 argparse。
+- 去掉的互 import：`sp_index → sp_policy/sp_fingerprint/sp_pending`、`sp_coverage/sp_classify/
+  sp_exit/sp_retire_candidates → sp_policy`、`sp_embed_bench → sp_fingerprint`、
+  `sp_convert → sp_pending`、`sp_assert_audit → sp_index`。
+- 行为不变：`sp_index --plan --json`、`sp_pending --decide --json`、`sp_coverage --json`、
+  `policy.summary` / `fingerprint.hardware_fp` 全等。
+- 仍未收敛的互 import（后续小步）：采集/会话簇（`sp_archive`/`sp_recall` → `sp_sources`，
+  `sp_subagent`/`sp_s0scan` → `sp_convert`，`sp_line_split`/`sp_rebirth_check`/`sp_rejects` →
+  `sp_session_io`）与 LLM 管道簇（`sp_llm_*`）。

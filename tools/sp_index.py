@@ -39,15 +39,16 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_policy  # noqa: E402
-import sp_fingerprint  # noqa: E402
+from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import fingerprint as sp_fingerprint  # noqa: E402
 from ssotlib import asserts as sp_assert_lib  # noqa: E402
-import sp_pending  # noqa: E402
+from ssotlib import pending as sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 from ssotlib.index import embed as _embed  # noqa: E402
 from ssotlib.index import layout as _layout  # noqa: E402
 from ssotlib.index import pack as _pack  # noqa: E402
+from ssotlib.index.chunking import chunk_file  # noqa: E402
 
 SEM = _layout.SEM
 PROFILE = os.path.expanduser(os.environ.get(
@@ -278,28 +279,6 @@ def file_corpus_files():
     fs += [os.path.join(SSOT, 'sessions', 'registry.md')]
     fs += sorted(glob.glob(os.path.join(SSOT, 'inbox', '*.md')))
     return [f for f in fs if os.path.isfile(f) and os.path.abspath(f) != os.path.abspath(ASSERT)]
-
-
-def chunk_file(path, target=700, hard=1400):
-    lines = open(path, errors='replace').read().splitlines()
-    chunks, cur, start = [], [], 1
-    for i, l in enumerate(lines, 1):
-        if not cur:
-            start = i
-        cur.append(l)
-        if len('\n'.join(cur)) >= target:
-            chunks.append((start, '\n'.join(cur)))
-            cur = []
-    if cur:
-        chunks.append((start, '\n'.join(cur)))
-    out = []
-    for s, t in chunks:
-        while len(t) > hard:
-            out.append((s, t[:hard], '', ''))
-            t = t[hard:]
-        if t.strip():
-            out.append((s, t, '', ''))
-    return out
 
 
 def _assert_meta():

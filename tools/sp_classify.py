@@ -19,7 +19,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_policy  # noqa: E402
+from ssotlib import policy as sp_policy  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 LOG = os.path.join(SSOT, 'logs', 'classify-ops.jsonl')

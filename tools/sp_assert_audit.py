@@ -20,7 +20,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_index  # noqa: E402
+from ssotlib.index.chunking import chunk_file  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
@@ -61,7 +61,7 @@ def cycles(blocks):
 
 def chunk_stats(blocks):
     try:
-        chunks = sp_index.chunk_file(ASSERT)
+        chunks = chunk_file(ASSERT)
     except Exception:
         chunks = []
     multi = zero = split = 0

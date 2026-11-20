@@ -50,9 +50,9 @@ def main():
 
         # after_index: generation 未变 → 清 marker
         env = dict(os.environ, SSOT_ROOT=str(t))
-        code = ("import sys;sys.path.insert(0,%r);import sp_pending;"
-                "d=sp_pending.load();sp_pending.after_index(d.get('generation'),False,False);"
-                "print(sp_pending.load())" % str(ROOT / "tools"))
+        code = ("import sys;sys.path.insert(0,%r);from ssotlib import pending;"
+                "d=pending.load();pending.after_index(d.get('generation'),False,False);"
+                "print(pending.load())" % str(ROOT / "tools"))
         r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
         if r.returncode != 0 or json.loads(r.stdout):
             fails.append(f"after_index 未清: {r.stdout} {r.stderr}")

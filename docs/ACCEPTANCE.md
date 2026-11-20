@@ -188,3 +188,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.asserts` / `ssotlib.candidates` ← `ssot_check`/`sp_assert_*`/`sp_compile`/`sp_index`/`sp_candidates`/`sp_candidate_dedup` |
 | 判据 | ① `ssot_check` 输出与迁移前逐字节一致 ② 断言回归（audit/meta/supersede/index/alloc）全绿 ③ `ASSERT_A`/`CITE` 等旧导入名仍可用 ④ `sp_candidate_dedup` 源码里不再出现 `sp_semantic` |
 | 反例 | 缺号统计不再排除预留编号 → FAIL；A515b 被当重复 → FAIL；候选极性判反（否定句当肯定）→ FAIL |
+
+## 21 索引线去环（v0.21.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 策略/指纹/交接/切块各一份；审计工具不再为了一个函数导入整个索引器 |
+| 步骤 | `ssotlib.{policy,fingerprint,pending}` + `ssotlib.index.chunking` ← 7 个工具引用；旧模块降为薄壳 |
+| 判据 | ① `sp_index --plan --json` 全等 ② `sp_pending --decide --json` 全等 ③ `sp_coverage --json` 全等 ④ 策略摘要与硬件指纹全等 ⑤ `sp_assert_audit` 源码不再 `import sp_index` |
+| 反例 | policy 默认值变化导致索引源增减 → FAIL；pending 判定改变 → FAIL；切块边界变化 → 块数变化 → FAIL |
