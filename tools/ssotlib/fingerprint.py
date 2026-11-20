@@ -9,6 +9,8 @@ import platform
 import subprocess
 import sys
 
+from . import cli
+
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 
 
@@ -68,7 +70,10 @@ def llama_version(exe=None):
         r = subprocess.run([exe, '--version'], capture_output=True, text=True, timeout=10)
         out = (r.stdout + r.stderr).strip().splitlines()
         return out[0] if out else 'unknown'
-    except Exception:
+    except FileNotFoundError:
+        return 'unknown'
+    except (subprocess.TimeoutExpired, OSError) as e:
+        cli.probe_warn('llama-version', '读取 llama-server 版本失败', e)
         return 'unknown'
 
 

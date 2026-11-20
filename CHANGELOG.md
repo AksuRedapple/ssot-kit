@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.29.0] - 2026-11-20 — 异常处理第四批：探测语义
+
+- **feat(cli)**: 新增 `cli.probe_warn`——探测失败分级：未安装/未运行（`FileNotFoundError` / `ConnectionRefusedError`）静默，超时/权限/协议错才告警一次
+- **refactor(probe)**: `fingerprint.llama_version`（版本探测）、`sp_embed_bench.health`（健康探针）、`sp_index.git_commit`（仓库状态）改用分级告警；不再把所有失败都当「没在跑」
+- **test(cli)**: `probe_warn` 四档（未安装/未运行/超时/权限）有回归
+
 ## [0.28.0] - 2026-11-20 — 异常处理第三批：损坏状态可见
 
 - **feat(store)**: 新增 `read_json_strict(path, default, label)`——**文件不存在**→静默默认（正常情形）；**存在但解析失败**→默认 + `warn_once`

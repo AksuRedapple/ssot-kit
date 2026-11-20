@@ -150,7 +150,8 @@ def health(port):
     try:
         with urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=3) as r:
             return r.status == 200
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        cli.probe_warn(f'health:{port}', f'探测 127.0.0.1:{port}/health 失败', e)
         return False
 
 

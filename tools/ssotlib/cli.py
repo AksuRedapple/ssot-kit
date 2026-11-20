@@ -52,6 +52,17 @@ def add_dry_run(ap, help_text='只打印计划，不写盘'):
     return ap
 
 
+def probe_warn(key, label, exc):
+    """探测失败分级：未安装/未运行是常态（静默）；超时/权限/协议错才告警一次。"""
+    import urllib.error
+    if isinstance(exc, (FileNotFoundError, ConnectionRefusedError, NotADirectoryError)):
+        return
+    if isinstance(exc, urllib.error.URLError):
+        if isinstance(getattr(exc, 'reason', None), ConnectionRefusedError):
+            return
+    warn_once(key, f'{label}: {type(exc).__name__}: {exc}')
+
+
 def run(fn, argv=None):
     """执行 fn(argv) 或 fn()，把异常映射成退出码；返回整数退出码。"""
     try:

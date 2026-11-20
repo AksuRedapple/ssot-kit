@@ -192,7 +192,10 @@ def git_commit():
     try:
         return subprocess.check_output(['git', '-C', SSOT, 'rev-parse', '--short', 'HEAD'],
                                        text=True, stderr=subprocess.DEVNULL).strip() or '-'
-    except Exception:
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return '-'                       # 没装 git / 不是仓库：常态
+    except (subprocess.TimeoutExpired, OSError) as e:
+        cli.probe_warn('git-commit', '读取 git commit 失败', e)
         return '-'
 
 

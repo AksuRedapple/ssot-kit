@@ -227,3 +227,13 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
   `ssotlib.policy.load_policy`（坏了会让监控会话进索引）、
   `layout.active_version`（坏了会退回旧库）、`sp_index.contract_schema`。
 - 仍保留静默：只读报表类（`ssot_check` 各项）、纯展示字段（`build_commit`）。
+
+### 0.29 异常处理第四批（探测语义）
+
+- `cli.probe_warn(key, label, exc)`：`FileNotFoundError` / `ConnectionRefusedError`
+  视为「没装 / 没运行」→ 静默；`TimeoutExpired` / `PermissionError` / 协议错 → `warn_once`。
+- 迁移：`fingerprint.llama_version`、`sp_embed_bench.health`、`sp_index.git_commit`。
+- 其余探测（`ssot_check.git`、`sp_line_status` 等）仍是「失败给默认值」，因为它们的默认值
+  （`-` / 0）本身就是报表语义，不构成状态误判。
+- 私有 `steward.sh`：加 `set -o pipefail` + `trap … ERR`（不中止，错误进日志）；
+  与 kit 版不同，未随 kit 发布。

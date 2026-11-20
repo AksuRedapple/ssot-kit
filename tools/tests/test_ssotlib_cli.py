@@ -62,6 +62,21 @@ class TestRun(unittest.TestCase):
         self.assertNotIn('第二次', out)
         self.assertIn('另一条', out)
 
+    def test_probe_warn_levels(self):
+        import urllib.error
+        cli._WARNED.clear()
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            cli.probe_warn('p1', '未安装', FileNotFoundError('x'))
+            cli.probe_warn('p2', '未运行', urllib.error.URLError(ConnectionRefusedError('refused')))
+            self.assertEqual(err.getvalue(), '')
+            cli.probe_warn('p3', '超时', TimeoutError('slow'))
+            cli.probe_warn('p4', '权限', PermissionError('denied'))
+        out = err.getvalue()
+        self.assertIn('超时', out)
+        self.assertIn('权限', out)
+        self.assertNotIn('未安装', out)
+        self.assertNotIn('未运行', out)
+
     def test_system_exit_passes_through(self):
         def f():
             raise SystemExit(1)

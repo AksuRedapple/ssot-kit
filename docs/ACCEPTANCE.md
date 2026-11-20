@@ -260,3 +260,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `store.read_json_strict` ← 7 个状态读取点 |
 | 判据 | ① 损坏的分配器/策略/active 仍能回退 ② stderr 出现一次「无法解析」 ③ 文件缺失时 stderr 为空 ④ 合法文件不告警 |
 | 反例 | 缺失也刷警告（噪声化）→ FAIL；损坏后继续用损坏值 → FAIL；损坏导致崩溃 → FAIL |
+
+## 29 异常处理第四批（v0.29.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 「没装/没运行」不该报警，「超时/权限」必须报；两者不能都当 False |
+| 步骤 | `cli.probe_warn` ← `llama_version` / `health` / `git_commit` |
+| 判据 | ① 命令不存在、端口拒绝 → 静默 ② 超时、权限 → stderr 警告一次 ③ 返回值与迁移前一致（`unknown` / `False` / `-`） |
+| 反例 | 端口没起就刷警告 → FAIL；超时被当「没在跑」→ FAIL；探测失败导致崩溃 → FAIL |
