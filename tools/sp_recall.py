@@ -26,6 +26,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import sources as sp_sources  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = sp_sources.SSOT
 ROLES = ('qoder', 'cc', 'dsh', 'pi', 'codex')
@@ -198,9 +199,7 @@ def scan_live(only, rx, ctx, since, hits, seen):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        epilog='示例:\n  sp_recall.py "dsh-fastlane"\n  sp_recall.py "密钥" --raw --json',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_recall.py "dsh-fastlane"\n  sp_recall.py "密钥" --raw --json', root=False)
     ap.add_argument('pattern')
     ap.add_argument('--harness', default='all', help='all 或逗号分隔（qoder,cc,dsh,pi,codex）')
     ap.add_argument('--ctx', type=int, default=300, help='命中前后各保留字符数（默认 300）')

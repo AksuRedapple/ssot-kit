@@ -26,6 +26,7 @@ if _HERE not in sys.path:
 
 from ssotlib.candidates import (clean_claim, fp, is_junk, jaccard, norm, overlap,  # noqa: E402
                                 polarity, rstrip_lines, sentences, tokens)
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 OUTDIR = os.path.join(SSOT, 'inbox', 'candidates')
@@ -488,9 +489,7 @@ def main():
     from sp_contract import guard as _contract_guard
     if not _contract_guard('sp_candidates', write=True):
         return 2
-    ap = argparse.ArgumentParser(
-    epilog='【契约】意图：把候选从账本里筛选/去重/撞正本；只读正本，永不写断言\n退出码：0=正常；2=实例契约不符（先跑 sp_migrate）\n失败后：契约不符→sp_migrate --to current；冲突→看 --review\n\n示例:\n  sp_candidates.py --src dsh --min-score 5      # 从 DSH 会话抽候选\n  sp_candidates.py --against-assertions         # 撞正本(先做!已知断言占比通常很高)\n  sp_candidates.py --dedupe-l2                  # 候选间 L2 去重(0.92/0.85,related top3)\n  sp_candidates.py --review candidate --limit 10\n  sp_candidates.py --accept cand_xxx            # 只打印 inbox 行,不写正本\n  sp_candidates.py --selftest                   # 冲突检测自检\n\n纪律:抽取器永不写 assertions/lines。\n顺序:撞正本 → 候选间去重 → 冲突 → 人工审(见 A421)。',
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：把候选从账本里筛选/去重/撞正本；只读正本，永不写断言\n退出码：0=正常；2=实例契约不符（先跑 sp_migrate）\n失败后：契约不符→sp_migrate --to current；冲突→看 --review\n\n示例:\n  sp_candidates.py --src dsh --min-score 5      # 从 DSH 会话抽候选\n  sp_candidates.py --against-assertions         # 撞正本(先做!已知断言占比通常很高)\n  sp_candidates.py --dedupe-l2                  # 候选间 L2 去重(0.92/0.85,related top3)\n  sp_candidates.py --review candidate --limit 10\n  sp_candidates.py --accept cand_xxx            # 只打印 inbox 行,不写正本\n  sp_candidates.py --selftest                   # 冲突检测自检\n\n纪律:抽取器永不写 assertions/lines。\n顺序:撞正本 → 候选间去重 → 冲突 → 人工审(见 A421)。', root=False)
     ap.add_argument('--src', default='all', help='qoder|cc|pi|dsh|all')
     ap.add_argument('--since', help='YYYY-MM-DD,会话目录日期前缀过滤')
     ap.add_argument('--session', action='append', help='只扫描目录名含该前缀/片段的会话；可重复或逗号分隔')

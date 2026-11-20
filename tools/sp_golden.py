@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 import time
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 QUERIES = os.path.join(SSOT, 'profile', 'golden-queries.jsonl')
@@ -210,8 +211,7 @@ def check(top, min_recall, as_json=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_golden.py --capture --apply\n  sp_golden.py --check',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_golden.py --capture --apply\n  sp_golden.py --check', root=False)
     ap.add_argument('--init', action='store_true', help='在 profile/ 建查询模板（不存在才写）')
     ap.add_argument('--suggest', action='store_true', help='从本机 lines/断言标题生成候选 query（只打印）')
     ap.add_argument('--limit', type=int, default=10)

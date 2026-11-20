@@ -18,6 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 LOG = os.path.join(SSOT, 'S2-index', 'search-log.jsonl')
@@ -88,8 +89,7 @@ def sessions():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_retire_candidates.py --days 180',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_retire_candidates.py --days 180', root=False)
     ap.add_argument('--days', type=int, default=180)
     ap.add_argument('--limit', type=int, default=100)
     ap.add_argument('--min-logs', type=int, default=20, help='少于该日志数时标记低置信')

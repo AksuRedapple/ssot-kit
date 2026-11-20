@@ -13,6 +13,7 @@ import sys
 
 kit = pathlib.Path(sys.argv[1])
 expected = sys.argv[2] == "yes"
+sys.path.insert(0, str(kit / "tools"))          # sp_bootstrap 依赖 ssotlib
 spec = importlib.util.spec_from_file_location("sp_bootstrap", kit / "tools" / "sp_bootstrap.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

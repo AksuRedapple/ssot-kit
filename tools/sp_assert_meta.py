@@ -18,6 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib.asserts import CITE_RX, parse  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
@@ -116,8 +117,7 @@ def set_one(aid, status, by, reason, operator):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_assert_meta.py --apply',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_assert_meta.py --apply', root=False)
     ap.add_argument('--scan', action='store_true')
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--set', metavar='AID')

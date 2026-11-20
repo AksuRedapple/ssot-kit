@@ -27,6 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import fingerprint as sp_fingerprint  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SECRET_RX = re.compile(
@@ -154,9 +155,7 @@ def health(port):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        epilog='示例:\n  sp_embed_bench.py --quick\n  sp_embed_bench.py --port 8398 --batch 32,128 --workers 1,2 --json',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_embed_bench.py --quick\n  sp_embed_bench.py --port 8398 --batch 32,128 --workers 1,2 --json', root=False)
     ap.add_argument('--port', type=int, default=8399)
     ap.add_argument('--corpus', help='JSONL 语料（默认从 S1 transcript 抽样）')
     ap.add_argument('--batch', default=None, help='逗号分隔，默认 32,64,128,256')

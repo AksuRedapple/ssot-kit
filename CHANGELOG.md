@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.25.0] - 2026-11-20 — argparse 收口
+
+- **refactor(cli)**: 56 个工具（含未发布的私有工具）的 `argparse.ArgumentParser(epilog=..., formatter_class=RawDescriptionHelpFormatter)` 改为 `ssotlib.cli.base_parser(epilog=..., root=False)`；工具自己的参数一个不动
+- **fix(test)**: `bootstrap_capture_optional_test.sh` 用 importlib 加载 `sp_bootstrap` 时补 `sys.path`（新依赖 `ssotlib`）
+- **验证**: 迁移前后逐工具对拍 `--help`，56/56 输出与退出码逐字节一致
+
 ## [0.24.1] - 2026-11-20 — bash 3.2 兼容修复
 
 - **fix(shell)**: `$VAR` 紧跟中文/全角标点时改用 `${VAR}`。macOS 自带 bash 3.2 会把全角字符算进变量名，配合 `set -u` 直接 `unbound variable`；CI 用的正是 `/bin/bash`，本机 Homebrew bash 5 不复现

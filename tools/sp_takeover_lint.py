@@ -12,6 +12,7 @@
 退出码:有 R3/R4 违规 → 1;否则 0(--strict 下 R1/R2 也计入)
 """
 import argparse, datetime, glob, json, os, re, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 SKIP_MARK = re.compile(r'(退役|失效|历史|已迁|旧路径|待迁|改为|作废)')
@@ -66,8 +67,7 @@ def check(path, now, root=SSOT):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_takeover_lint.py\n  sp_takeover_lint.py --json --strict',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_takeover_lint.py\n  sp_takeover_lint.py --json --strict', root=False)
     ap.add_argument('--dir', default=os.path.join(SSOT, 'lines'))
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--strict', action='store_true')

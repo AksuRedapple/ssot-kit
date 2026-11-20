@@ -9,6 +9,7 @@
   python3 tools/sp_line_status.py --apply
 """
 import argparse, datetime, glob, os, re, subprocess, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 STATUS_RX = re.compile(r'^> 状态[:：](.*)$', re.M)
@@ -86,8 +87,7 @@ def process(path, apply_):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_line_status.py --dry-run\n  sp_line_status.py --apply',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_line_status.py --dry-run\n  sp_line_status.py --apply', root=False)
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--dir', default=os.path.join(SSOT, 'lines'))
     a = ap.parse_args()

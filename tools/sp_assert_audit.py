@@ -25,6 +25,7 @@ from ssotlib.index.chunking import chunk_file  # noqa: E402
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
 from ssotlib.asserts import CITE_RX, parse  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 
 def citations(ids):
@@ -120,8 +121,7 @@ def audit():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_assert_audit.py\n  sp_assert_audit.py --json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_assert_audit.py\n  sp_assert_audit.py --json', root=False)
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--strict', action='store_true')
     a = ap.parse_args()

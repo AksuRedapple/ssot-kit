@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
@@ -313,8 +314,7 @@ def unretire(sids, apply=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_exit.py --make-manifest --class monitor --out logs/exit.jsonl',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_exit.py --make-manifest --class monitor --out logs/exit.jsonl', root=False)
     ap.add_argument('--make-manifest', action='store_true')
     ap.add_argument('--retire', metavar='MANIFEST')
     ap.add_argument('--verify', metavar='MANIFEST')

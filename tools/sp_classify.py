@@ -20,6 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 LOG = os.path.join(SSOT, 'logs', 'classify-ops.jsonl')
@@ -146,8 +147,7 @@ def set_one(sid8, cls, reason):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_classify.py --scan\n  sp_classify.py --apply',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_classify.py --scan\n  sp_classify.py --apply', root=False)
     ap.add_argument('--scan', action='store_true')
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--init', action='store_true')

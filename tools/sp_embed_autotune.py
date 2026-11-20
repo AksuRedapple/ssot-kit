@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import time
+from ssotlib import cli  # noqa: E402
 
 ROOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 PROFILE = os.path.expanduser(os.environ.get(
@@ -259,9 +260,7 @@ def print_human(p, bench=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        epilog='示例:\n  sp_embed_autotune.py --probe\n  sp_embed_autotune.py --bench --quick --apply',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_embed_autotune.py --probe\n  sp_embed_autotune.py --bench --quick --apply', root=False)
     ap.add_argument('--probe', action='store_true', help='只读探测 + 建议（默认）')
     ap.add_argument('--bench', action='store_true', help='跑只读基准（当前端口）')
     ap.add_argument('--apply', action='store_true', help='写 profile（否则只打印）')

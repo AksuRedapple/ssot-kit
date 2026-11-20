@@ -6,6 +6,7 @@
 落盘: ./.memory/handoff/latest.md(工作区级)
 """
 import argparse, os, sys, datetime, re
+from ssotlib import cli  # noqa: E402
 
 TPL = """# handoff · {name} · {ts}
 
@@ -124,9 +125,7 @@ def check(a=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-    epilog='示例:\n  sp_handoff.py --init --goal "做完 X" --fact "Y 已验证|source: 会话#L12" --reject "方案 Z|原因: 代价太高" --next "接 dispatch 注入"\n  sp_handoff.py --check     # 四段齐 / 事实带 source / 否决段 >= 1\n\n落到 ./.memory/handoff/latest.md;dispatch --level pointer 会自动注入前 8 行。\n唯一真判据:新会话不看旧会话,也能说出「否决过的路」且不重走。',
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_handoff.py --init --goal "做完 X" --fact "Y 已验证|source: 会话#L12" --reject "方案 Z|原因: 代价太高" --next "接 dispatch 注入"\n  sp_handoff.py --check     # 四段齐 / 事实带 source / 否决段 >= 1\n\n落到 ./.memory/handoff/latest.md;dispatch --level pointer 会自动注入前 8 行。\n唯一真判据:新会话不看旧会话,也能说出「否决过的路」且不重走。', root=False)
     ap.add_argument('--init', action='store_true')
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--preset', default=None, help='转生 preset(index-work/infra-ops/writing/generic)')

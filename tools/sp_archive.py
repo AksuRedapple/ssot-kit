@@ -28,6 +28,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import sources as sp_sources  # noqa: E402
 from ssotlib.ingest import SECRET_RX, scrub as scrub_text  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = sp_sources.SSOT
 MANIFEST = os.path.join(SSOT, 'logs', 'archive-manifest.jsonl')
@@ -177,9 +178,7 @@ def apply_scrub(src, dst, limit_bytes=256 * 1024 * 1024):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        epilog='示例:\n  sp_archive.py\n  sp_archive.py --apply',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_archive.py\n  sp_archive.py --apply', root=False)
     ap.add_argument('--apply', action='store_true', help='真正写入（默认 dry-run）')
     ap.add_argument('--dry', action='store_true', help='只预览（默认；显式写法）')
     ap.add_argument('--copy', action='store_true', help='强制实体复制，不 hardlink')

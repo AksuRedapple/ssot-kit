@@ -12,6 +12,7 @@
   sp_bootstrap.py --only index                    # 单阶段重跑
 """
 import argparse, glob, json, os, subprocess, sys, time
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 STATE = os.environ.get('ZB_BOOTSTRAP_STATE') or os.path.expanduser('~/.ssot/bootstrap-state.json')
@@ -197,8 +198,7 @@ def _session_ids(d):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_bootstrap.py --plan\n  sp_bootstrap.py --full-dump --dry-run\n  sp_bootstrap.py --full-dump --allow-llm --resume',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_bootstrap.py --plan\n  sp_bootstrap.py --full-dump --dry-run\n  sp_bootstrap.py --full-dump --allow-llm --resume', root=False)
     ap.add_argument('--plan', action='store_true')
     ap.add_argument('--full-dump', action='store_true')
     ap.add_argument('--resume', action='store_true')

@@ -14,6 +14,7 @@
 - 索引类派生物(BUILD.json 的 schema 字段可以补,但向量库不迁移)只重建
 """
 import argparse, glob, json, os, shutil, sys, tarfile, time
+from ssotlib import cli  # noqa: E402
 
 try:
     from sp_contract import TOOL_CONTRACT
@@ -196,8 +197,7 @@ def _to_target(s):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='【契约】意图：把实例数据契约推进到目标版本；只做加法，失败不留半迁移\n退出码：0=成功/已最新；1=失败（已完成步骤保留）；2=有迁移锁\n失败后：看 --status；恢复用 backups/pre-migrate-*.tar.gz\n\n示例:\n  sp_migrate.py --status\n  sp_migrate.py --to 2 --dry-run\n  sp_migrate.py --to 2 --apply\n  sp_migrate.py --to current --apply   # 升到本版工具支持的契约号',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：把实例数据契约推进到目标版本；只做加法，失败不留半迁移\n退出码：0=成功/已最新；1=失败（已完成步骤保留）；2=有迁移锁\n失败后：看 --status；恢复用 backups/pre-migrate-*.tar.gz\n\n示例:\n  sp_migrate.py --status\n  sp_migrate.py --to 2 --dry-run\n  sp_migrate.py --to 2 --apply\n  sp_migrate.py --to current --apply   # 升到本版工具支持的契约号', root=False)
     ap.add_argument('--status', action='store_true')
     ap.add_argument('--to', type=_to_target)
     ap.add_argument('--dry-run', action='store_true')

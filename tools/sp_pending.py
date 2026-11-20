@@ -18,11 +18,11 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 from ssotlib import pending  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_pending.py --decide --json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_pending.py --decide --json', root=False)
     ap.add_argument('--status', action='store_true')
     ap.add_argument('--merge', action='store_true')
     ap.add_argument('--sessions', type=int, default=0)

@@ -11,6 +11,7 @@ import argparse, glob, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sp_llm import run_llm, PROMPT_VER
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 OUT = os.path.join(SSOT, 'compile', 'llm-extract')
@@ -122,8 +123,7 @@ def validate(cands, chunk_text):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_llm_extract.py --sid 4a4753ed --max-chunks 2 --dry-run\n  sp_llm_extract.py --sid 4a4753ed',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_llm_extract.py --sid 4a4753ed --max-chunks 2 --dry-run\n  sp_llm_extract.py --sid 4a4753ed', root=False)
     ap.add_argument('--sid', required=True)
     ap.add_argument('--chunk', type=int, default=200)
     ap.add_argument('--max-chunks', type=int, default=0)

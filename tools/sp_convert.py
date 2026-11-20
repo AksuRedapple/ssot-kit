@@ -20,6 +20,7 @@ import argparse, datetime, hashlib, json, os, re, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import pending as sp_pending  # noqa: E402
 from ssotlib.ingest import DROP_TYPES, SECRET_RX, local, norm_content, scrub  # noqa: E402,F401
+from ssotlib import cli  # noqa: E402
 
 def slugify(s, n=40):
     s = re.sub(r'[^\w\u4e00-\u9fff\-]+', '-', s).strip('-')
@@ -393,9 +394,7 @@ def convert(path, title_override=None, force=False):
     return outdir, counts, len(rows)
 
 def main():
-    ap = argparse.ArgumentParser(
-    epilog='【契约】意图：原始会话→S1 五件套；只读原件\n退出码：0=完成；非0=源缺失/解析失败（跳过）\n失败后：看失败会话；原件不动，可重跑\n\n示例:\n  sp_convert.py --src dsh --incremental     # 增量转换(按 meta.converted_at 与源 mtime)\n  sp_convert.py --src qoder --all            # 全量\n  sp_convert.py --src cc --sid 4c767364      # 单个会话\n判据:四数齐(会话数/行数/角色分布/时间线)+ 抽样文本无乱码。',
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：原始会话→S1 五件套；只读原件\n退出码：0=完成；非0=源缺失/解析失败（跳过）\n失败后：看失败会话；原件不动，可重跑\n\n示例:\n  sp_convert.py --src dsh --incremental     # 增量转换(按 meta.converted_at 与源 mtime)\n  sp_convert.py --src qoder --all            # 全量\n  sp_convert.py --src cc --sid 4c767364      # 单个会话\n判据:四数齐(会话数/行数/角色分布/时间线)+ 抽样文本无乱码。', root=False)
     ap.add_argument('--sid', help='会话 id 前缀')
     ap.add_argument('--title', help='覆盖标题')
     ap.add_argument('--all', action='store_true', help='全量转换（主会话文件）')

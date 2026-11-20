@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 PENDING = os.path.join(SSOT, 'sessions', '_pending')
@@ -125,9 +126,7 @@ def cmd_candidate(sid8):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        epilog='示例:\n  sp_drafts.py --list\n  sp_drafts.py --candidate 1a2b3c4d',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_drafts.py --list\n  sp_drafts.py --candidate 1a2b3c4d', root=False)
     ap.add_argument('--list', action='store_true')
     ap.add_argument('--candidate', metavar='SID8')
     ap.add_argument('--json', action='store_true')

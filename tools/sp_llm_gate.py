@@ -10,6 +10,7 @@
   python3 tools/sp_llm_gate.py --review --labels /tmp/labels.json
 """
 import argparse, glob, json, os, re, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 
@@ -87,8 +88,7 @@ def distill_gate(path):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_llm_gate.py --extract\n  sp_llm_gate.py --review --labels /tmp/labels.json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_llm_gate.py --extract\n  sp_llm_gate.py --review --labels /tmp/labels.json', root=False)
     ap.add_argument('--extract', action='store_true')
     ap.add_argument('--review', action='store_true')
     ap.add_argument('--distill', action='store_true')

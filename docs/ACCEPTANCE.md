@@ -224,3 +224,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | gate/steward 加 `set -euo pipefail`；hooks 标 fail-open；新增 `shell_strict_test.sh` |
 | 判据 | ① gate 三态 0/1/2 不变 ② steward 在空实例 + `SSOT_STEWARD_SKIP_INDEX=1` 下 rc=0 且日志完整 ③ 非测试脚本全部有 `set -e`（例外 3 个且带注释） |
 | 反例 | hook 加 `set -e` 后因 `[ -f ]` 假条件退出、吞掉注入 → FAIL；steward 某步失败仍打印 `== steward done ==` → FAIL |
+
+## 25 argparse 收口（v0.25.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 命令行解析基座只有一份；帮助格式/未来统一开关有唯一落点 |
+| 步骤 | `cli.base_parser(epilog=…, root=False)` 替换 56 处 `argparse.ArgumentParser(…RawDescriptionHelpFormatter)` |
+| 判据 | ① 迁移前后 56 个 `--help` 逐字节一致（含退出码） ② 工具参数零改动 ③ 私有/kit 两套测试全绿 |
+| 反例 | 某个工具的 help 文本或退出码变化 → FAIL；`base_parser` 默认加了 `--root` 导致参数冲突 → FAIL |

@@ -11,6 +11,7 @@
 等价判据:总块数相等 + 逐路径块数全等 + 维度一致(见 A420)。
 """
 import argparse, json, os, shutil, sqlite3, sys
+from ssotlib import cli  # noqa: E402
 
 
 def merge(out, parts):
@@ -67,8 +68,7 @@ def verify(db, ref):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_index_merge.py --out /tmp/final.db /tmp/shard0.db /tmp/shard1.db\n  sp_index_merge.py --verify /tmp/final.db ~/ssot/S2-index/semantic/index.db',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_index_merge.py --out /tmp/final.db /tmp/shard0.db /tmp/shard1.db\n  sp_index_merge.py --verify /tmp/final.db ~/ssot/S2-index/semantic/index.db', root=False)
     ap.add_argument('--out')
     ap.add_argument('--verify', nargs=2, metavar=('DB', 'REF'))
     ap.add_argument('parts', nargs='*')

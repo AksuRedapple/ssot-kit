@@ -6,6 +6,7 @@
   python3 tools/sp_assert_ingest.py --dir compile/llm-distill-batch --apply
 """
 import argparse, glob, importlib.util, json, os, re, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
@@ -40,8 +41,7 @@ def existing():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_assert_ingest.py --dir compile/llm-distill-batch --dry-run',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_assert_ingest.py --dir compile/llm-distill-batch --dry-run', root=False)
     ap.add_argument('--dir', required=True)
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--thr', type=float, default=THR_DUP)

@@ -13,6 +13,7 @@
 回退:删 inbox/.triage-state.jsonl + 不再调用钩子。
 """
 import argparse, datetime, glob, hashlib, importlib.util, json, os, re, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 ROOT = os.environ.get('ZB_TRIAGE_ROOT') or SSOT     # 测试隔离用:不改生产 inbox
@@ -326,8 +327,7 @@ def main():
     from sp_contract import guard as _contract_guard
     if not _contract_guard('sp_triage', write=True):
         return 2
-    ap = argparse.ArgumentParser(epilog='【契约】意图：候选→审阅表→A/R→收件箱；不写正本\n退出码：0=成功；2=契约不符\n失败后：契约不符→sp_migrate\n\n示例:\n  sp_triage.py extract --sid 4c767364 --top 40\n  sp_triage.py accept --sid 4c767364 --ids 1,3 --line dpt-third-screen\n  sp_triage.py status --since 2026-10-01',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：候选→审阅表→A/R→收件箱；不写正本\n退出码：0=成功；2=契约不符\n失败后：契约不符→sp_migrate\n\n示例:\n  sp_triage.py extract --sid 4c767364 --top 40\n  sp_triage.py accept --sid 4c767364 --ids 1,3 --line dpt-third-screen\n  sp_triage.py status --since 2026-10-01', root=False)
     sub = ap.add_subparsers(dest='cmd', required=True)
     e = sub.add_parser('extract'); e.add_argument('--sid', required=True); e.add_argument('--since'); e.add_argument('--top', type=int, default=40)
     e.add_argument('--legacy-from-s1', action='store_true', help='旧路径:重扫 transcript(仅当该会话还没进账本)')

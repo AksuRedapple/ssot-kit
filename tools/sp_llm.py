@@ -10,6 +10,7 @@
   from sp_llm import run_llm           # 代码内调用
 """
 import argparse, datetime, json, os, subprocess, sys, tempfile, time, uuid
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 LOG = os.path.join(SSOT, 'logs', 'llm-runs.jsonl')
@@ -107,8 +108,7 @@ def selftest():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_llm.py --selftest\n  sp_llm.py --ping',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_llm.py --selftest\n  sp_llm.py --ping', root=False)
     ap.add_argument('--selftest', action='store_true')
     ap.add_argument('--ping', action='store_true')
     ap.add_argument('--model', default=None)

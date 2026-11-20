@@ -33,6 +33,7 @@ if _HERE not in sys.path:
 from ssotlib import asserts  # noqa: E402
 from ssotlib.entries import (CONF_PREFIXES, ENTRY_RE, head_marker_count, inbox_stats,  # noqa: E402
                              is_entry, marker_count, normalize_conf, parse_conf, pending_count)
+from ssotlib import cli  # noqa: E402
 
 # 与 sp_compile.HARD_LIMIT(25000) 对齐，告警线留 1000B 余量
 MEM_WARN = 24000
@@ -375,9 +376,7 @@ def line_drift(root):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-    epilog="【契约】意图：一次体检（台账/收件箱/索引/覆盖/接手面/契约）\n退出码：0=健康；1=有问题；2=参数错\n失败后：按 ❌ 行逐项处理\n\n示例:\n  ssot_check.py            # 六检查一屏;'== 完成(健康)' 为通过\n  ssot_check.py --json     # 机器可读",
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog="【契约】意图：一次体检（台账/收件箱/索引/覆盖/接手面/契约）\n退出码：0=健康；1=有问题；2=参数错\n失败后：按 ❌ 行逐项处理\n\n示例:\n  ssot_check.py            # 六检查一屏;'== 完成(健康)' 为通过\n  ssot_check.py --json     # 机器可读", root=False)
     ap.add_argument('--root', default=os.path.expanduser('~/ssot'))
     ap.add_argument('--report', default=None, help='生成 SSOT_REPORT.md 的路径')
     ap.add_argument('--strict', action='store_true', help='断言重号/缺号或 inbox 积压时非零退出（值班/CI 用）')

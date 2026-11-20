@@ -11,6 +11,7 @@
 import argparse, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sp_llm import run_llm
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 LEDGER = os.path.join(SSOT, 'inbox', 'candidates', 'candidates.jsonl')
@@ -59,8 +60,7 @@ def load_candidates(limit=12, state='candidate'):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_llm_review.py --limit 12\n  sp_llm_review.py --limit 12 --dry-run',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_llm_review.py --limit 12\n  sp_llm_review.py --limit 12 --dry-run', root=False)
     ap.add_argument('--limit', type=int, default=12)
     ap.add_argument('--dry-run', action='store_true')
     a = ap.parse_args()

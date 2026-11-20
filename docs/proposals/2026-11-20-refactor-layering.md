@@ -177,3 +177,12 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 `$VAR` 后紧跟全角/中文时，macOS 自带 bash 3.2 会把多字节字符并入变量名（`ALLOW）：` →
 变量 `ALLOW\xef...`），`set -u` 下直接 unbound。CI 的 `shell: /bin/bash` 就是 3.2，
 本机 Homebrew bash 5 不报。规则：**变量在非 ASCII 字符前一律 `${VAR}`**。
+
+## 落地记录（0.25，argparse）
+
+- 56 处 `argparse.ArgumentParser(epilog=…, formatter_class=RawDescriptionHelpFormatter)`
+  统一改为 `cli.base_parser(epilog=…, root=False)`；不新增 `--root`，不改任何工具参数。
+- 验收：迁移前抓取 56 个工具的 `--help`，迁移后逐个对拍，**输出与退出码逐字节一致**。
+- 实现坑：Python AST 的 `col_offset` 是 **UTF-8 字节偏移**，不是字符偏移。按字符拼接会
+  在多字节行上错位；第一版因此把 `) \n` 吃掉、被 `ast.parse` 拦下（未写盘），改用字节切片后正常。
+- 工具互 import 与 argparse 两项审计债至此收口。

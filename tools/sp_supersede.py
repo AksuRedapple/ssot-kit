@@ -20,6 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sp_assert_meta  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 CAND = os.path.join(SSOT, 'inbox', 'candidates', 'candidates.jsonl')
@@ -78,8 +79,7 @@ def from_conflict(as_json=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_supersede.py --propose A012 --by A031 --apply',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_supersede.py --propose A012 --by A031 --apply', root=False)
     ap.add_argument('--propose')
     ap.add_argument('--confirm')
     ap.add_argument('--by')

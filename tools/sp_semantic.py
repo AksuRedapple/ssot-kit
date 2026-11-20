@@ -39,6 +39,7 @@ if _HERE not in sys.path:
 from ssotlib.index import embed as _embed  # noqa: E402
 from ssotlib.index import layout as _layout  # noqa: E402
 from ssotlib.index import pack as _pack  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = _layout.SSOT
 SEM = _layout.SEM
@@ -753,9 +754,7 @@ def main():
     from sp_contract import guard as _contract_guard
     if not _contract_guard('sp_semantic', write=False):
         return 2
-    ap = argparse.ArgumentParser(
-    epilog='【契约】意图：按意思检索全库；不改数据\n退出码：0=有结果；非0=无索引/嵌入服务不可用\n失败后：起 :8399 或 sp_index --incremental；临时 --oneshot\n\n示例:\n  sp_semantic.py "<问题>" --expand --top 5\n  sp_semantic.py "<问题>" --path lines/ --role user --top 5\n前提:pack 与 BUILD.json 已就绪;chunks=0 或 pack 缺失会直接报错(先跑 sp_index)。',
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：按意思检索全库；不改数据\n退出码：0=有结果；非0=无索引/嵌入服务不可用\n失败后：起 :8399 或 sp_index --incremental；临时 --oneshot\n\n示例:\n  sp_semantic.py "<问题>" --expand --top 5\n  sp_semantic.py "<问题>" --path lines/ --role user --top 5\n前提:pack 与 BUILD.json 已就绪;chunks=0 或 pack 缺失会直接报错(先跑 sp_index)。', root=False)
     ap.add_argument('query', nargs='?', default=None)
     ap.add_argument('--top', type=int, default=8)
     ap.add_argument('--path', default=None, help='路径子串过滤，如 lines / S1-sessions')

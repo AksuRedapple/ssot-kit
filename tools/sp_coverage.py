@@ -12,6 +12,7 @@ import argparse, glob, json, os, sqlite3, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 SEM = os.path.join(SSOT, 'S2-index', 'semantic')
@@ -214,8 +215,7 @@ def collect():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_coverage.py\n  sp_coverage.py --json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_coverage.py\n  sp_coverage.py --json', root=False)
     ap.add_argument('--json', action='store_true')
     a = ap.parse_args()
     rows, pending = collect()

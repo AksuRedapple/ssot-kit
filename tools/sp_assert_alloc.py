@@ -13,6 +13,7 @@
 import argparse, fcntl, glob, json, os, re, sys
 
 from ssotlib import asserts  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
@@ -84,8 +85,7 @@ def commit(ids):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_assert_alloc.py --next 2\n  sp_assert_alloc.py --commit 521',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_assert_alloc.py --next 2\n  sp_assert_alloc.py --commit 521', root=False)
     ap.add_argument('--next', type=int, default=0)
     ap.add_argument('--commit', nargs='+', type=int, default=[])
     ap.add_argument('--status', action='store_true')

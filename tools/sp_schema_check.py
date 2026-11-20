@@ -7,6 +7,7 @@
 退出码:0=全部一致;1=有漂移(需要 sp_migrate)
 """
 import argparse, glob, json, os, sys
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 CONTRACT = os.path.join(SSOT, 'profile', 'contract.json')
@@ -76,8 +77,7 @@ def scan():
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_schema_check.py\n  sp_schema_check.py --json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_schema_check.py\n  sp_schema_check.py --json', root=False)
     ap.add_argument('--json', action='store_true')
     a = ap.parse_args()
     r = scan()

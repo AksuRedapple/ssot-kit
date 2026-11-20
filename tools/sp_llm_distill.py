@@ -11,6 +11,7 @@
 import argparse, glob, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sp_llm import run_llm
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 SCHEMA = os.path.join(SSOT, 'schemas', 'distill.json')
@@ -63,8 +64,7 @@ def from_ledger(limit):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_llm_distill.py --from-extract b0a82327\n  sp_llm_distill.py --from-ledger --limit 12',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_llm_distill.py --from-extract b0a82327\n  sp_llm_distill.py --from-ledger --limit 12', root=False)
     ap.add_argument('--from-extract')
     ap.add_argument('--from-ledger', action='store_true')
     ap.add_argument('--limit', type=int, default=12)

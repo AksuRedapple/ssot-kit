@@ -17,6 +17,7 @@ import datetime, sys
 """
 import argparse, json, os, re
 from pathlib import Path
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 # 各 harness 的默认注入预算(可用 --budget 覆盖)
@@ -216,9 +217,7 @@ def render(level, pages, budget):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-    epilog='【契约】意图：开局给上下文（按预算分级）；只读\n退出码：0=成功；非0=缺正本/参数错\n失败后：缺文件→先 setup\n\n示例:\n  sp_dispatch.py --level pointer --cwd "$PWD"   # 开局默认(约 200 tok)\n  sp_dispatch.py --level summary --budget 900   # 要现状段\n  sp_dispatch.py --for codex --level summary    # 用 harness 默认预算(500)\n  sp_dispatch.py --line ssot-hub --level full --budget 4000\n\n要点:默认只给指针;全文只在被问到/显式 --level full 时拉。\n能力行来自 BUILD.json,chunks=0 时自动降级为「语义检索不可用」。',
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='【契约】意图：开局给上下文（按预算分级）；只读\n退出码：0=成功；非0=缺正本/参数错\n失败后：缺文件→先 setup\n\n示例:\n  sp_dispatch.py --level pointer --cwd "$PWD"   # 开局默认(约 200 tok)\n  sp_dispatch.py --level summary --budget 900   # 要现状段\n  sp_dispatch.py --for codex --level summary    # 用 harness 默认预算(500)\n  sp_dispatch.py --line ssot-hub --level full --budget 4000\n\n要点:默认只给指针;全文只在被问到/显式 --level full 时拉。\n能力行来自 BUILD.json,chunks=0 时自动降级为「语义检索不可用」。', root=False)
     ap.add_argument('--for', dest='harness', default='dsh')
     ap.add_argument('--cwd', default=os.getcwd())
     ap.add_argument('--level', choices=['pointer', 'summary', 'full'], default='pointer')

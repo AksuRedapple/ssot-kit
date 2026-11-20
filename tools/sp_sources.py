@@ -14,11 +14,11 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 from ssotlib.sources import discover, parse_since  # noqa: E402
+from ssotlib import cli  # noqa: E402
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_sources.py\n  sp_sources.py --json',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_sources.py\n  sp_sources.py --json', root=False)
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--only', help='逗号分隔：qoder,cc,dsh,pi,codex,opencode,qoder-app')
     ap.add_argument('--since', help='只统计最近变更，如 30d / 12h / 2w')

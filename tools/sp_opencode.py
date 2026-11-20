@@ -12,6 +12,7 @@ legacy 只补未迁移会话（session/message/part）；不再假设 session_pa
   python3 tools/sp_opencode.py --db /tmp/x.db --root /tmp/r   # 测试用
 """
 import argparse, datetime, json, os, re, sqlite3, sys, time
+from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 DB = os.path.expanduser('~/.local/share/opencode/opencode.db')
@@ -172,8 +173,7 @@ def write_s1(root, con, s, force=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(epilog='示例:\n  sp_opencode.py --list\n  sp_opencode.py --dry-run --limit 2\n  sp_opencode.py --limit 5',
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = cli.base_parser(epilog='示例:\n  sp_opencode.py --list\n  sp_opencode.py --dry-run --limit 2\n  sp_opencode.py --limit 5', root=False)
     ap.add_argument('--db', default=DB)
     ap.add_argument('--root', default=SSOT)
     ap.add_argument('--limit', type=int, default=5)
