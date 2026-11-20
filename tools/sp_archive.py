@@ -26,7 +26,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_sources  # noqa: E402
+from ssotlib import sources as sp_sources  # noqa: E402
 from sp_convert import scrub as scrub_text, SECRET_RX  # noqa: E402
 
 SSOT = sp_sources.SSOT

@@ -197,3 +197,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.{policy,fingerprint,pending}` + `ssotlib.index.chunking` ← 7 个工具引用；旧模块降为薄壳 |
 | 判据 | ① `sp_index --plan --json` 全等 ② `sp_pending --decide --json` 全等 ③ `sp_coverage --json` 全等 ④ 策略摘要与硬件指纹全等 ⑤ `sp_assert_audit` 源码不再 `import sp_index` |
 | 反例 | policy 默认值变化导致索引源增减 → FAIL；pending 判定改变 → FAIL；切块边界变化 → 块数变化 → FAIL |
+
+## 22 采集线去环（v0.22.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 源发现与会话读取各一份；LLM 工具不再为取一个向量加载整个检索器 |
+| 步骤 | `ssotlib.sources` / `ssotlib.session_io` ← 5 个工具；6 处 importlib → `ssotlib.index.embed` |
+| 判据 | ① `sp_sources --json` 与迁移前逐字节一致 ② 三形状/系统注入统计回归通过 ③ 全仓不再有 `spec_from_file_location('sem'` ④ `m.embed(`/`m.QUERY_PREFIX` 归零 |
+| 反例 | 系统注入被算成用户消息（条数虚高）→ FAIL；跨 harness 出现空集 → FAIL；换模型端口后 embed 失败 → FAIL |

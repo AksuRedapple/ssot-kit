@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.22.0] - 2026-11-20 — 采集线去环：sources / session_io / 嵌入调用
+
+- **refactor(lib)**: 新增 `ssotlib/sources.py`（会话源发现，原 `sp_sources`）与 `ssotlib/session_io.py`（会话读取唯一入口：CC/Codex/S1 三形状 + 系统注入过滤）
+- **refactor(tools)**: `sp_archive` / `sp_recall` 改用 `ssotlib.sources`；`sp_line_split` / `sp_rebirth_check` / `sp_rejects` 改用 `ssotlib.session_io`；`sp_sources.py` / `sp_session_io.py` 降为薄壳
+- **refactor(llm)**: `sp_assert_ingest` / `sp_llm_distill_batch` / `sp_llm_eval` / `sp_llm_gate` / `sp_pick_chunks` 的 6 处 `importlib` 加载 `sp_semantic` 改为 `ssotlib.index.embed`（不再为一个 `embed` 拉起 965 行检索器）
+- **行为不变**: `sp_sources --json` 与迁移前逐字节一致；会话三形状/系统注入统计有回归
+
 ## [0.21.0] - 2026-11-20 — 索引线去环：policy / fingerprint / pending / chunking
 
 - **refactor(lib)**: 新增 `ssotlib/policy.py`（索引生命周期策略）、`ssotlib/fingerprint.py`（嵌入环境指纹）、`ssotlib/pending.py`（采集→索引交接核心）、`ssotlib/index/chunking.py`（切块）

@@ -25,7 +25,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sp_sources  # noqa: E402
+from ssotlib import sources as sp_sources  # noqa: E402
 
 SSOT = sp_sources.SSOT
 ROLES = ('qoder', 'cc', 'dsh', 'pi', 'codex')

@@ -28,15 +28,13 @@ def load_claims():
 def rediscovery(claims, thr=0.75):
     if not claims:
         return 0.0
-    import importlib.util
     import numpy as np
-    spec = importlib.util.spec_from_file_location('sem', os.path.join(SSOT, 'tools', 'sp_semantic.py'))
-    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    from ssotlib.index import embed
     txt = open(os.path.join(SSOT, 'knowledge', 'assertions.md'), encoding='utf-8').read()
     heads = [b.split('\n')[0][6:120] for b in re.split(r'\n## ', txt) if re.match(r'A\d{3}', b)]
-    V = np.array([np.asarray(m.embed(m.QUERY_PREFIX + h), dtype=np.float32) for h in heads])
+    V = np.array([np.asarray(embed.embed_one(embed.QUERY_PREFIX + h), dtype=np.float32) for h in heads])
     V /= (np.linalg.norm(V, axis=1, keepdims=True) + 1e-9)
-    C = np.array([np.asarray(m.embed(m.QUERY_PREFIX + c), dtype=np.float32) for c in claims])
+    C = np.array([np.asarray(embed.embed_one(embed.QUERY_PREFIX + c), dtype=np.float32) for c in claims])
     C /= (np.linalg.norm(C, axis=1, keepdims=True) + 1e-9)
     best = (C @ V.T).max(axis=1)
     return float((best >= thr).mean())

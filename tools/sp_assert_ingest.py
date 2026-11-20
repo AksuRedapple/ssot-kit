@@ -55,14 +55,13 @@ def main():
     from sp_assert_alloc import alloc, commit
     ids = alloc(len(keep)) if keep else []
     last = None
-    spec = importlib.util.spec_from_file_location('sem', os.path.join(SSOT, 'tools', 'sp_semantic.py'))
-    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    from ssotlib.index import embed
     import numpy as np
-    E = np.array([np.asarray(m.embed(m.QUERY_PREFIX + t + ' ' + b), dtype=np.float32) for _, t, b in ex])
+    E = np.array([np.asarray(embed.embed_one(embed.QUERY_PREFIX + t + ' ' + b), dtype=np.float32) for _, t, b in ex])
     E /= (np.linalg.norm(E, axis=1, keepdims=True) + 1e-9)
     keep, dup = [], []
     for d in ds:
-        v = np.asarray(m.embed(m.QUERY_PREFIX + d['claim']), dtype=np.float32)
+        v = np.asarray(embed.embed_one(embed.QUERY_PREFIX + d['claim']), dtype=np.float32)
         v /= (np.linalg.norm(v) + 1e-9)
         s = float((E @ v).max())
         d['sim'] = round(s, 3)

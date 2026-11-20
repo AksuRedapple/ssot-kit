@@ -138,3 +138,16 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - 仍未收敛的互 import（后续小步）：采集/会话簇（`sp_archive`/`sp_recall` → `sp_sources`，
   `sp_subagent`/`sp_s0scan` → `sp_convert`，`sp_line_split`/`sp_rebirth_check`/`sp_rejects` →
   `sp_session_io`）与 LLM 管道簇（`sp_llm_*`）。
+
+## 落地记录（0.22，采集线）
+
+- `ssotlib/sources.py`：`sp_sources` 的发现逻辑（ROOTS/env 覆盖/parse_since/discover/
+  iter_files）；`sp_sources.py` 只留 CLI。
+- `ssotlib/session_io.py`：`sp_session_io` 全量搬移（CC / Codex rollout / S1 三形状 +
+  系统注入过滤 + `stats`）；薄壳保留旧名。
+- LLM 管道的 6 处 `importlib` 加载 `sp_semantic`（只为 `embed` + `QUERY_PREFIX`）改为
+  `ssotlib.index.embed`；同时清掉多余的 `import importlib.util`。
+- 行为不变：`sp_sources --json` 逐字节一致；`test_session_lifecycle_tools` 仍 PASS。
+- 仍未收敛：`sp_archive`/`sp_s0scan`/`sp_subagent` → `sp_convert`（`scrub`/`SECRET_RX`/
+  `norm_content`/`local`/`DROP_TYPES`），LLM 簇内部互相 import。采集中枢 sp_convert 的
+  共享件抽取留作下一小步。
