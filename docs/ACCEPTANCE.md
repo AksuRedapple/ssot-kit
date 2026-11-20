@@ -215,3 +215,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.ingest` ← `sp_convert` / `sp_archive` / `sp_s0scan` / `sp_subagent` / `sp_recall` |
 | 判据 | ① 全仓无 `from sp_convert import`（字符串提及不算） ② 脱敏覆盖 sk/ghp/github_pat/AKIA/hf/bearer ③ 三形状归一与 UTC+8 有回归 ④ archive/s0scan/recall 既有测试全绿 |
 | 反例 | 新增一种密钥形态只改一处 → FAIL；`norm_content` 优先级变化（text 被 tool_use 盖住）→ FAIL |
+
+## 24 shell 失败模式（v0.24.0）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 该 fail loud 的脚本要停；该 fail open 的 hook 要写明理由，不能一刀切 |
+| 步骤 | gate/steward 加 `set -euo pipefail`；hooks 标 fail-open；新增 `shell_strict_test.sh` |
+| 判据 | ① gate 三态 0/1/2 不变 ② steward 在空实例 + `SSOT_STEWARD_SKIP_INDEX=1` 下 rc=0 且日志完整 ③ 非测试脚本全部有 `set -e`（例外 3 个且带注释） |
+| 反例 | hook 加 `set -e` 后因 `[ -f ]` 假条件退出、吞掉注入 → FAIL；steward 某步失败仍打印 `== steward done ==` → FAIL |

@@ -2,7 +2,7 @@
 # ssot-kit · 发布/交接门禁：确认当前会话在 registry 有行。
 # 用法: bash scripts/session-gate.sh [publish|handoff] [--sid SID] [--root DIR]
 # 退出码：0=有行；1=无行；2=无法验证（缺 sid/registry）
-set -u
+set -euo pipefail
 
 ROOT="${SSOT_ROOT:-$HOME/ssot}"
 MODE="publish"

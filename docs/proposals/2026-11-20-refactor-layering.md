@@ -160,3 +160,14 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - 测试：`test_ssotlib_ingest.py`（脱敏形态、三形状归一、UTC+8、单一真相）；示例密钥用
   字符串拼接构造，避免 public-audit 把「测试样例」当真实凭据。
 - 结果：采集、索引、断言三条线均为 `tools → ssotlib` 单向；仅剩实验性 LLM 簇内部互 import。
+
+## 落地记录（0.24，shell 失败模式）
+
+- 新增 `set -euo pipefail`：`scripts/session-gate.sh`（门禁，必须 fail loud）、
+  `tools/steward.sh`（值守，失败要停而不是继续跑半套）。
+- steward 内 `[ -f ... ] && DEC=$(...)` 改为 `if`——这是 `set -e` 的典型误杀点。
+- 三个 hooks 保留 `set -u` 并写明 fail-open 理由：hook 失败不应阻塞用户会话；
+  且 `[ -f "$ROOT/.xxx-off" ] && exit 0` 在文件不存在时返回 1，加 `set -e` 会直接终止 hook。
+- `tools/tests/shell_strict_test.sh` 把「非测试脚本必须 set -e + 例外清单收敛」变成回归。
+- 私有侧：`sp_ask.sh` 标注「薄包装需传播子进程退出码」例外；`eg2_watchdog.sh` 补 `set -u`。
+  私有 `steward.sh`（L1 值守，与 kit 版不同）未动，留作单独一次小步。

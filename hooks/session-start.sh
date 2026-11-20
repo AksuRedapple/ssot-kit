@@ -2,6 +2,7 @@
 mkdir -p "${ROOT:-$HOME/ssot}/alerts" 2>/dev/null || true
 # ssot-kit · SessionStart hook：只注入指针与现场态，不推送长文。
 # 安装：bash scripts/install-hooks.sh（写入 ~/.qoder/settings.json 或 --settings 指定文件）
+# 不设 set -e：hook 必须 fail-open，失败不能阻塞用户会话（审计例外，见 ACCEPTANCE §24）
 set -u
 
 ROOT="${SSOT_ROOT:-$HOME/ssot}"

@@ -2,7 +2,7 @@
 # ssot-kit · 6h 值守（通用版）：索引增量 + 自查 + 草稿计数，只写本实例。
 # 用法：bash tools/steward.sh   （由 scripts/install-steward.sh 挂 launchd/systemd timer）
 # 可选：SSOT_STEWARD_SKIP_INDEX=1 跳过索引（无嵌入服务/测试时）
-set -u
+set -euo pipefail
 
 ROOT="${SSOT_ROOT:-$HOME/ssot}"
 LOG="$ROOT/alerts/steward.log"
@@ -15,7 +15,9 @@ if [ "${SSOT_STEWARD_SKIP_INDEX:-0}" = "1" ]; then
   say "index: skipped（SSOT_STEWARD_SKIP_INDEX=1）"
 elif [ -f "$ROOT/tools/sp_index.py" ] && curl -s -m 3 http://127.0.0.1:8399/health >/dev/null 2>&1; then
   DEC=""
-  [ -f "$ROOT/tools/sp_pending.py" ] && DEC=$(cd "$ROOT" && python3 tools/sp_pending.py --decide --json 2>/dev/null || true)
+  if [ -f "$ROOT/tools/sp_pending.py" ]; then
+    DEC=$(cd "$ROOT" && python3 tools/sp_pending.py --decide --json 2>/dev/null || true)
+  fi
   ACTION=$(printf '%s' "$DEC" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("action","run"))
 except Exception: print("run")' 2>/dev/null || echo run)
@@ -66,6 +68,6 @@ PY
   say "S0 secrets: ${S0_LINE}"
 fi
 
-DRAFTS=$(find "$ROOT/sessions/_pending" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+DRAFTS=$(find "$ROOT/sessions/_pending" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ' || true)
 say "pending drafts: ${DRAFTS}"
 say "== steward done =="

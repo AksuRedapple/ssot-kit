@@ -3,6 +3,7 @@ mkdir -p "${ROOT:-$HOME/ssot}/alerts" 2>/dev/null || true
 # ssot-kit · Stop hook：只写「机械草稿」，不做语义判断。
 # 同 sid 默认 600 秒去抖（Stop 每轮都会触发，不能每轮写一行）；草稿供收尾/周值班转 registry。
 # 关停：touch $ROOT/.stop-draft-off（或 SSOT_STOP_DRAFT_OFF=1）
+# 不设 set -e：hook 必须 fail-open，失败不能阻塞用户会话（审计例外，见 ACCEPTANCE §24）
 set -u
 
 ROOT="${SSOT_ROOT:-$HOME/ssot}"

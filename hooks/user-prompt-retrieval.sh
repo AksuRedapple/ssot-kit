@@ -2,6 +2,7 @@
 mkdir -p "${ROOT:-$HOME/ssot}/alerts" 2>/dev/null || true
 # ssot-kit · UserPromptSubmit hook：命中「回忆句式」才查，top-3 注入，不每轮全查。
 # 关停：touch $ROOT/.retrieval-off（或 SSOT_RETRIEVAL_OFF=1）
+# 不设 set -e：hook 必须 fail-open，失败不能阻塞用户会话（审计例外，见 ACCEPTANCE §24）
 set -u
 
 ROOT="${SSOT_ROOT:-$HOME/ssot}"

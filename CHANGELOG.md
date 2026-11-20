@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.24.0] - 2026-11-20 — shell 失败模式收口
+
+- **fix(shell)**: `scripts/session-gate.sh` 与 `tools/steward.sh` 加 `set -euo pipefail`；steward 里可能返回非零的 AND-list 改成 `if`（否则 `set -e` 会在「文件不存在」时误杀值守）
+- **docs(shell)**: 三个 hooks 明确标注 fail-open 例外——不设 `set -e`，避免 `[ -f x ] && exit 0` 在文件缺失时终止 hook、反而阻塞用户会话
+- **test(shell)**: 新增 `shell_strict_test.sh`：非测试脚本必须 `set -e`；fail-open 例外必须带说明注释，例外数固定为 3（新增要改测试并写理由）
+
 ## [0.23.0] - 2026-11-20 — 采集线收口：ingest 共享件
 
 - **refactor(lib)**: 新增 `tools/ssotlib/ingest.py`——密钥脱敏（`SECRET_RX`/`scrub`）、内容归一（`norm_content`）、时区（`local`）、丢弃类型（`DROP_TYPES`）
