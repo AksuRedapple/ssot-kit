@@ -33,6 +33,20 @@ def read_json(path, default=None):
         return default
 
 
+def read_json_strict(path, default=None, label=None):
+    """读 JSON：**不存在**→静默给 default；**存在但坏了**→default + 警告一次。"""
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return default
+    except (OSError, ValueError) as e:
+        from . import cli
+        cli.warn_once('corrupt:' + str(path),
+                      f'{label or path}: 文件存在但无法解析（{e}），已回退默认值')
+        return default
+
+
 def iter_jsonl(path):
     """→ 生成器 (lineno, obj|None)；坏行给 None，由调用方决定计数还是中断。"""
     try:

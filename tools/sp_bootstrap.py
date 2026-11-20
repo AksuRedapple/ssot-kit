@@ -12,7 +12,7 @@
   sp_bootstrap.py --only index                    # 单阶段重跑
 """
 import argparse, glob, json, os, subprocess, sys, time
-from ssotlib import cli  # noqa: E402
+from ssotlib import cli, store  # noqa: E402
 
 SSOT = os.path.expanduser('~/ssot')
 STATE = os.environ.get('ZB_BOOTSTRAP_STATE') or os.path.expanduser('~/.ssot/bootstrap-state.json')
@@ -37,10 +37,7 @@ def sh(cmd, dry=False, timeout=7200):
 
 
 def load_state():
-    try:
-        return json.load(open(STATE, encoding='utf-8'))
-    except Exception:
-        return {'phases': {}, 'started': None}
+    return store.read_json_strict(STATE, {'phases': {}, 'started': None}, label='bootstrap 状态')
 
 
 def save_state(st):

@@ -14,7 +14,7 @@
 - 索引类派生物(BUILD.json 的 schema 字段可以补,但向量库不迁移)只重建
 """
 import argparse, glob, json, os, shutil, sys, tarfile, time
-from ssotlib import cli  # noqa: E402
+from ssotlib import cli, store  # noqa: E402
 
 try:
     from sp_contract import TOOL_CONTRACT
@@ -29,17 +29,15 @@ BACKUPS = os.path.join(SSOT, 'backups')
 
 
 def contract_num():
+    d = store.read_json_strict(CONTRACT, {}, label='实例契约')
     try:
-        return int(json.load(open(CONTRACT, encoding='utf-8')).get('contract', 0))
-    except Exception:
+        return int(d.get('contract', 0)) if isinstance(d, dict) else 0
+    except (TypeError, ValueError):
         return 0
 
 
 def load_state():
-    try:
-        return json.load(open(STATE, encoding='utf-8'))
-    except Exception:
-        return {'applied': [], 'failed': None}
+    return store.read_json_strict(STATE, {'applied': [], 'failed': None}, label='迁移状态')
 
 
 def save_state(st):

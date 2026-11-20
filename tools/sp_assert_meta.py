@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib.asserts import CITE_RX, parse  # noqa: E402
-from ssotlib import cli  # noqa: E402
+from ssotlib import cli, store  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 ASSERT = os.path.join(SSOT, 'knowledge', 'assertions.md')
@@ -27,10 +27,7 @@ EVENTS = os.path.join(SSOT, 'knowledge', 'supersede-events.jsonl')
 
 
 def load_meta():
-    try:
-        return json.load(open(META, encoding='utf-8'))
-    except Exception:
-        return {'schema': 1, 'entries': {}}
+    return store.read_json_strict(META, {'schema': 1, 'entries': {}}, label='断言状态 sidecar')
 
 
 def save_meta(d):

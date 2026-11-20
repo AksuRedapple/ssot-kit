@@ -217,3 +217,13 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
 - 做法：局部 `bad` 计数 + `cli.warn_once('bad:<path>', …)`，只在 `bad>0` 时输出到
   stderr；坏行仍跳过，不中断批次；`--json` 的 stdout 不受污染。
 - 未处理：纯语料扫描（sp_llm_*）、逐文件 `continue` 的目录遍历——噪声大、价值低。
+
+### 0.28 异常处理第三批（损坏状态）
+
+- `store.read_json_strict`：`FileNotFoundError` 静默（没配/没装是常态），
+  解析失败/权限问题 → 默认值 + `warn_once`。
+- 迁移点：`sp_assert_alloc._load`（坏了会导致撞号）、`sp_assert_meta.load_meta`、
+  `sp_bootstrap.load_state`、`sp_migrate.contract_num/load_state`、
+  `ssotlib.policy.load_policy`（坏了会让监控会话进索引）、
+  `layout.active_version`（坏了会退回旧库）、`sp_index.contract_schema`。
+- 仍保留静默：只读报表类（`ssot_check` 各项）、纯展示字段（`build_commit`）。

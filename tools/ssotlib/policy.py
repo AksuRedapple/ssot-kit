@@ -7,6 +7,8 @@ import json
 import os
 import re
 
+from . import store
+
 CLASSES = ('human', 'automation', 'monitor', 'decision', 'unknown')
 DEFAULT_INCLUDE = ['human', 'decision', 'unknown']
 DEFAULT_SKIP = ['automation', 'monitor']
@@ -23,20 +25,16 @@ def load_policy(root=None):
     p = os.path.join(root, POLICY_REL)
     base = {'schema': 1, 'enabled': False, 'include': list(DEFAULT_INCLUDE),
             'skip': list(DEFAULT_SKIP), 'rules': [], 'heuristics': False}
-    try:
-        with open(p, encoding='utf-8') as f:
-            d = json.load(f)
-        if not isinstance(d, dict):
-            return base
-        base.update({k: v for k, v in d.items() if k in
-                     ('schema', 'enabled', 'include', 'skip', 'rules', 'heuristics')})
-        if 'enabled' not in d:
-            base['enabled'] = True
-        base['include'] = [str(x) for x in (base.get('include') or [])]
-        base['skip'] = [str(x) for x in (base.get('skip') or [])]
-        base['rules'] = base.get('rules') if isinstance(base.get('rules'), list) else []
-    except Exception:
-        pass
+    d = store.read_json_strict(p, None, label='索引策略 index-policy.json')
+    if not isinstance(d, dict):
+        return base
+    base.update({k: v for k, v in d.items() if k in
+                 ('schema', 'enabled', 'include', 'skip', 'rules', 'heuristics')})
+    if 'enabled' not in d:
+        base['enabled'] = True
+    base['include'] = [str(x) for x in (base.get('include') or [])]
+    base['skip'] = [str(x) for x in (base.get('skip') or [])]
+    base['rules'] = base.get('rules') if isinstance(base.get('rules'), list) else []
     return base
 
 

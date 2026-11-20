@@ -34,12 +34,11 @@ def _sem(sem=None):
 def active_version(sem=None):
     """读 active.json；指向的版本不存在就当没有（回退 legacy）。"""
     sem = _sem(sem)
-    try:
-        v = store.read_json(os.path.join(sem, 'active.json'), {}).get('version')
-        if v and os.path.exists(os.path.join(sem, 'versions', v, 'index.db')):
-            return v
-    except Exception:
-        pass
+    d = store.read_json_strict(os.path.join(sem, 'active.json'), {},
+                               label='索引 active 指针')
+    v = d.get('version') if isinstance(d, dict) else None
+    if v and os.path.exists(os.path.join(sem, 'versions', v, 'index.db')):
+        return v
     return None
 
 

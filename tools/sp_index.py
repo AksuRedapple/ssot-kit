@@ -42,7 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
 from ssotlib import fingerprint as sp_fingerprint  # noqa: E402
 from ssotlib import asserts as sp_assert_lib  # noqa: E402
-from ssotlib import cli  # noqa: E402
+from ssotlib import cli, store  # noqa: E402
 from ssotlib import pending as sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
@@ -198,10 +198,13 @@ def git_commit():
 
 def contract_schema():
     """实例契约号（profile/contract.json）；无契约文件→None（旧实例不盖章）。"""
+    d = store.read_json_strict(os.path.join(SSOT, 'profile', 'contract.json'), None,
+                               label='实例契约 contract.json')
+    if not isinstance(d, dict):
+        return None
     try:
-        d = json.load(open(os.path.join(SSOT, 'profile', 'contract.json'), encoding='utf-8'))
         return int(d.get('contract', 0)) or None
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 

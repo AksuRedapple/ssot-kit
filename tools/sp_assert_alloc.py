@@ -12,7 +12,7 @@
 """
 import argparse, fcntl, glob, json, os, re, sys
 
-from ssotlib import asserts  # noqa: E402
+from ssotlib import asserts, store  # noqa: E402
 from ssotlib import cli  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
@@ -30,10 +30,7 @@ def _max_in_file():
 
 
 def _load():
-    try:
-        return json.load(open(STATE, encoding='utf-8'))
-    except Exception:
-        return {}
+    return store.read_json_strict(STATE, {}, label='断言编号分配状态')
 
 
 def _save(d):

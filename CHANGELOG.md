@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.28.0] - 2026-11-20 — 异常处理第三批：损坏状态可见
+
+- **feat(store)**: 新增 `read_json_strict(path, default, label)`——**文件不存在**→静默默认（正常情形）；**存在但解析失败**→默认 + `warn_once`
+- **refactor(state)**: 断言编号分配状态、断言 sidecar、bootstrap/迁移状态、索引策略、`active.json` 指针、实例契约改用严格读；损坏时仍能回退，但不再无声
+- **test**: 新增 `test_corrupt_state_warns.py`（损坏告警一次 / 缺失静默 / 合法不告警）
+
 ## [0.27.0] - 2026-11-20 — 异常处理第二批：坏行计数
 
 - **feat(parse)**: `sp_candidates`（候选账本）、`sp_triage`（账本两处读取）、`sp_retire_candidates`（检索日志）、`sp_subagent`（子 agent 转录）、`sp_recall`（S1 扫描）、`sp_export`（meta 读取）遇到坏 JSON 时计数并用 `warn_once` 报到 stderr——不再静默跳过
