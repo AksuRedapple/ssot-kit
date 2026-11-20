@@ -1,4 +1,4 @@
-# kit 能力清单（v0.19.0 · 2026-11-20）
+# kit 能力清单（v0.19.1 · 2026-11-20）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。
@@ -7,7 +7,9 @@
 
 `tools/ssotlib/` 是工具的共同底座（纯标准库，随 kit 安装）。**条目判定只有一份实现**：
 `entries.py` 的 `ENTRY_RE` / `is_entry` / 标记计数 / conf 解析；`store.py` 负责 JSON/JSONL
-原子写与坏行计数；`cli.py` 统一退出码（0 成功 / 1 产品失败 / 2 仪器失败）。
+原子写与坏行计数；`cli.py` 统一退出码（0 成功 / 1 产品失败 / 2 仪器失败）；
+`index/` 收敛索引层——版本目录与 active 指针（`layout.py`）、doc/query 前缀成对（`embed.py`）、
+向量包构建与压实（`pack.py`，numpy 只在真正读写向量包时导入）。
 
 > 依赖方向：`tools/*.py → ssotlib`。禁止工具之间互相 import，也禁止再复制 `ENTRY_RE`。
 

@@ -170,3 +170,12 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `ssotlib.entries` / `store` / `cli` ← `ssot_check.py` / `sp_purify.py` / `sp_pending.py` 引用 |
 | 判据 | ① `ssot_check.ENTRY_RE is entries.ENTRY_RE` 且 `sp_purify` 同 ② `test_ssotlib_*` 全绿 ③ 新旧 `ssot_check`/`sp_purify` 输出逐字节一致 ④ 影子实例 setup 后能 import ssotlib |
 | 反例 | 任一工具里再出现本地 `ENTRY_RE`/`is_entry` → FAIL；安装后 `ModuleNotFoundError: ssotlib` → FAIL |
+
+## 19 索引层共享件（0.19.x，v0.19.1）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 版本目录/嵌入/向量包只有一份实现；去掉 `sp_index → sp_semantic` 的工具互 import |
+| 步骤 | `ssotlib.index.{layout,embed,pack}` ← `sp_index` / `sp_semantic` 引用；`sp_pending` 走 `store` |
+| 判据 | ① 8 条查询输出逐字节一致 ② `sp_index --plan --json` 全等 ③ golden 5/5 ④ DB/pack/BUILD 未写（size+mtime+校验和） ⑤ 向量包 noop/append/rebuild 三路有测试 ⑥ daemon `_PACK_OVERRIDE` 仍生效 |
+| 反例 | 检索分数或命中路径变化 → FAIL；跑一次查询就重写向量包 → FAIL；daemon 注入被绕过 → FAIL |

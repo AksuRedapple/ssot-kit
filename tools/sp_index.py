@@ -45,108 +45,27 @@ import sp_assert_lib  # noqa: E402
 import sp_pending  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
-SEM = os.path.join(SSOT, 'S2-index', 'semantic')
+from ssotlib.index import embed as _embed  # noqa: E402
+from ssotlib.index import layout as _layout  # noqa: E402
+from ssotlib.index import pack as _pack  # noqa: E402
+
+SEM = _layout.SEM
 PROFILE = os.path.expanduser(os.environ.get(
     'EMBED_PROFILE', os.path.join(SSOT, 'profile', 'embed-profile.json')))
-DB = os.path.join(SEM, 'index.db')          # legacy（v1 单库）；版本化后仅作兜底
-VERS = os.path.join(SEM, 'versions')        # 每个全量构建一个版本目录
-ACTIVE = os.path.join(SEM, 'active.json')   # 唯一在线指针（原子切换）
+DB = _layout.LEGACY_DB                      # legacy（v1 单库）；版本化后仅作兜底
+VERS = _layout.VERS                         # 每个全量构建一个版本目录
+ACTIVE = _layout.ACTIVE                     # 唯一在线指针（原子切换）
 
+# 目录布局只有一份实现（ssotlib.index.layout）；这里保留同名别名供既有调用点使用。
+active_version = _layout.active_version
+resolve_db = _layout.resolve_db
+list_versions = _layout.list_versions
+write_root_manifest = _layout.write_root_manifest
+set_active = _layout.set_active
+prune_versions = _layout.prune_versions
 
-def active_version():
-    """读 active.json；指向的版本不存在就当没有（回退 legacy）。"""
-    try:
-        v = json.load(open(ACTIVE, encoding='utf-8')).get('version')
-        if v and os.path.exists(os.path.join(VERS, v, 'index.db')):
-            return v
-    except Exception:
-        pass
-    return None
-
-
-def resolve_db():
-    v = active_version()
-    return os.path.join(VERS, v, 'index.db') if v else DB
-
-
-def list_versions():
-    out = []
-    if os.path.isdir(VERS):
-        for name in sorted(os.listdir(VERS)):
-            d = os.path.join(VERS, name)
-            if not os.path.isdir(d):
-                continue
-            try:
-                n = sqlite3.connect(os.path.join(d, 'index.db'), timeout=5).execute(
-                    'select count(*) from chunks').fetchone()[0]
-            except Exception:
-                n = -1
-            st = 'building' if name.endswith('.building') else 'ready'
-            try:
-                st = open(os.path.join(d, 'STATUS'), encoding='utf-8').read().strip() or st
-            except Exception:
-                pass
-            out.append((name, st, n, os.path.getmtime(d)))
-    return out
-
-
-def write_root_manifest(ver):
-    """根 BUILD.json = 在线清单（daemon 盯它的 mtime 决定 reload）。"""
-    src = os.path.join(VERS, ver, 'BUILD.json')
-    data = {}
-    try:
-        data = json.load(open(src, encoding='utf-8'))
-    except Exception:
-        pass
-    data.update({'active': ver, 'db': os.path.join('versions', ver, 'index.db'),
-                 'activated_at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')})
-    tmp = os.path.join(SEM, '.BUILD.json.tmp')
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        f.write('\n')
-    os.replace(tmp, os.path.join(SEM, 'BUILD.json'))
-
-
-def set_active(ver):
-    tmp = os.path.join(SEM, '.active.json.tmp')
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump({'version': ver, 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')},
-                  f, ensure_ascii=False)
-        f.write('\n')
-    os.replace(tmp, ACTIVE)          # POSIX 原子
-    try:
-        open(os.path.join(VERS, ver, 'STATUS'), 'w', encoding='utf-8').write('active\n')
-    except Exception:
-        pass
-    for name, st, _n, _m in list_versions():
-        if name != ver and st == 'active':
-            try:
-                open(os.path.join(VERS, name, 'STATUS'), 'w', encoding='utf-8').write('retired\n')
-            except Exception:
-                pass
-    write_root_manifest(ver)
-
-
-def prune_versions(keep=2):
-    """保留最近 keep 个 ready 版本（active 永远保留）+ 清掉 >7 天的 retired。"""
-    # 顺手清掉中断留下的 .building（超过 1 天的），它们是构建残骸不是版本
-    for name, st, _n, m in list_versions():
-        if name.endswith('.building') and (time.time() - m) > 86400:
-            shutil.rmtree(os.path.join(VERS, name), ignore_errors=True)
-    vs = [v for v in list_versions() if v[1] != 'building']
-    vs.sort(key=lambda x: x[3], reverse=True)
-    act = active_version()
-    removed = []
-    for i, (name, st, _n, m) in enumerate(vs):
-        if name == act:
-            continue
-        if i < keep and (time.time() - m) < 7 * 86400:
-            continue
-        shutil.rmtree(os.path.join(VERS, name), ignore_errors=True)
-        removed.append(name)
-    return removed
-API = 'http://127.0.0.1:8399/v1/embeddings'
-DOC_PREFIX = 'title: none | text: '
+API = _embed.API
+DOC_PREFIX = _embed.DOC_PREFIX
 RUN_META = {}
 CLASS_BY_REL = {}
 REASON_BY_REL = {}
@@ -251,14 +170,12 @@ def refresh_pack():
         print('向量包: 跳过（分片模式，合并后由主库重建）', flush=True)
         return
     try:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        pack_vecs, pack_ids = _pack.pack_paths(DB)
         if '--full-pack' in sys.argv:
-            from sp_semantic import build_pack
-            n, secs = build_pack()
+            n, secs = _pack.build_pack(DB, pack_vecs, pack_ids)
             print(f'向量包: 全量重建 {n} 行（{secs:.0f}s）', flush=True)
             return
-        from sp_semantic import build_pack_incremental
-        r = build_pack_incremental()
+        r = _pack.build_pack_incremental(DB, pack_vecs, pack_ids)
         if r['mode'] == 'noop':
             print(f'向量包: 已最新（{r["stale"]} 行待压实）', flush=True)
         elif r['mode'] == 'append':
@@ -622,13 +539,7 @@ def apply_policy(con, skipped, operator='sp_index'):
 
 
 def embed_batch(texts, timeout=300):
-    req = urllib.request.Request(
-        API,
-        data=json.dumps({'input': texts}).encode(),
-        headers={'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        d = json.loads(r.read())
-    return [x['embedding'] for x in d['data']]
+    return _embed.embed_batch(texts, timeout=timeout, api=API)
 
 
 def pack_norm(vec):

@@ -88,3 +88,21 @@ tools/*.py               # 只做参数映射 + 调 ssotlib
   **逐字节一致**（P0 验收第 4 条）。
 - 遗留：`sp_dispatch` / `sp_handoff` 本轮未迁——它们没有条目解析副本，等 0.19.x 与
   `index/` 一起处理；`tests/` 里的 `test_sp_purify.py` 保留（黑盒 CLI 行为）。
+
+## 落地记录（0.19.x，索引层）
+
+- 新增 `tools/ssotlib/index/`：
+  - `layout.py`：`SEM/VERS/ACTIVE/LEGACY_DB`、`active_version` / `resolve_db` /
+    `list_versions` / `set_active` / `write_root_manifest` / `prune_versions` / `pack_paths`。
+    active 指针与根清单改用 `store.write_json_atomic`（原子不变，权限显式 0644）。
+  - `embed.py`：`DOC_PREFIX` 与 `QUERY_PREFIX` 同文件成对定义；`embed_batch` / `embed_one`。
+  - `pack.py`：`build_pack` / `build_pack_incremental` / `load_pack` / `pack_fresh`；
+    numpy 改为函数内惰性导入（装完不跑索引不需要第三方依赖）。
+- 消掉的重复：`sp_index.active_version…prune_versions` 六个函数、`sp_semantic._resolve_db`、
+  两处嵌入 HTTP 调用、以及 **`sp_index → sp_semantic` 的工具互 import**（refresh_pack 改用共享件）。
+- 兼容：`sp_semantic.load_pack` 仍是薄包装，保留 daemon 的 `_PACK_OVERRIDE` 注入点；
+  `sp_semantic.embed` / `QUERY_PREFIX` 等既有名字不变（其他工具在用）。
+- 行为不变证据：8 条查询输出逐字节一致、`sp_index --plan --json` 全等、golden 5/5 PASS、
+  DB/向量包/BUILD 的 size+mtime+首尾校验和未变。
+- 遗留：`sp_pending` 已在 0.19.0 用 `store`；`sp_index` 仍 import `sp_policy` /
+  `sp_fingerprint` / `sp_assert_lib`（属 0.20 的 asserts/candidates 迁移）。

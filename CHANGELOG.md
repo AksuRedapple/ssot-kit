@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.19.1] - 2026-11-20 — 分层重构 0.19.x：索引层共享件
+
+- **refactor(index)**: 新增 `tools/ssotlib/index/`——`layout.py`（版本目录 / active 指针 / 根 BUILD 清单）、`embed.py`（doc/query 前缀成对 + 批量/单条嵌入）、`pack.py`（向量包构建 / 增量 / 压实；numpy 惰性导入，安装面仍是纯标准库）
+- **refactor(tools)**: `sp_index` 不再 `from sp_semantic import build_pack`（工具互 import 少一处）；`sp_semantic` 的版本解析、嵌入、向量包改引用共享件，保留 `_PACK_OVERRIDE` 注入点与既有函数名
+- **test(index)**: 新增 `test_ssotlib_index.py`——legacy 兜底、active 原子切换、根清单字段合并、向量包 noop/append/rebuild 三条路径、嵌入服务调用、sp_index/sp_semantic 单一真相
+- **行为不变**: 8 条查询输出、`sp_index --plan --json`、golden 基线全等；DB / 向量包 / BUILD 的 size+mtime+首尾校验和全部未变（本次只搬移代码）
+
 ## [0.19.0] - 2026-11-20 — 分层重构 P0：ssotlib 共享层
 
 - **refactor(lib)**: 新增 `tools/ssotlib/`（纯标准库）——`entries.py` 条目/标记/conf 唯一实现、`store.py` JSON/JSONL 原子读写与坏行计数、`cli.py` 退出码三态与 dry-run 旗标
