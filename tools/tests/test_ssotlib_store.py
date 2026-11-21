@@ -25,6 +25,38 @@ class TestReadJson(unittest.TestCase):
             self.assertEqual(store.read_json(p, {'d': 1}), {'d': 1})
 
 
+class TestReadJsonStrict(unittest.TestCase):
+    def test_missing_is_silent(self):
+        from ssotlib import cli
+        cli._WARNED.clear()
+        import contextlib, io
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(store.read_json_strict('/nonexistent/x.json', {}), {})
+        self.assertEqual(err.getvalue(), '')
+
+    def test_corrupt_warns_once(self):
+        from ssotlib import cli
+        cli._WARNED.clear()
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as td:
+            p = os.path.join(td, 'x.json')
+            with open(p, 'w', encoding='utf-8') as f:
+                f.write('{坏')
+            with contextlib.redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(store.read_json_strict(p, {'d': 1}), {'d': 1})
+                store.read_json_strict(p, {'d': 1})
+            out = err.getvalue()
+            self.assertIn('无法解析', out)
+            self.assertEqual(out.count('无法解析'), 1)
+
+    def test_valid(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = os.path.join(td, 'x.json')
+            with open(p, 'w', encoding='utf-8') as f:
+                f.write('{"a": 1}')
+            self.assertEqual(store.read_json_strict(p, None), {'a': 1})
+
+
 class TestJsonl(unittest.TestCase):
     def test_bad_lines_counted(self):
         with tempfile.TemporaryDirectory() as td:

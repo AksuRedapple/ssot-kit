@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.0] - 2026-11-22 — 测试体系：入口冒烟 / 静态闸 / 口径回归 / 每晚跑
+
+- **fix(session_io)**: S1 的 `kind=tool_result` / `kind=meta` 不再算人类消息（此前 CC 会话 15 条被数成 630 条，转生 C5 覆盖率失真）；`SYSTEM_MARKERS` 补本机注入面（paseo-system / ssot-context / SSOT 提醒 / 时间戳 / skill 正文）
+- **test**: 新增 `test_session_counts.py`、`test_sp_convert_entry.py`、`test_sp_compile.py`、`test_sp_search.py`、`test_sp_dsh.py`、`test_sp_rebirth_check.py`、`test_steward_visibility.py`、`undefined_names_test.py`
+- **test(semantic)**: 缺 numpy 时用 `unittest.SkipTest` 而不是 `sys.exit(0)`——exit 0 在 runner 里等于 PASS（A562）
+- **feat(ssot_check)**: 新增 `[tests]` 行：最近一次全套回归的 pass/fail 与覆盖率基线，失败计入「需处理」
+- **feat(kit_check)**: `kit_manifest.tests_shipped` 驱动测试同步，`--sync` 一并复制共享测试；核验输出「文件 N/N · 测试 N/N 一致」
+
 ## [0.29.1] - 2026-11-22 — 修复 sp_convert 入口 + 入口冒烟闸
 
 - **fix(sp_convert)**: 恢复被分层重构误删的模块级常量块（`VAULT` / `SRCS` / `CUR_SRC` / `S0` / `S1` / `CONVERTER`）与 `contract_schema()` / `lstr()`。此前库测试全绿，但 `main()` 一跑就 `NameError`，steward 的三条转换（qoder/cc/pi）静默失败 29.5 小时（A561）

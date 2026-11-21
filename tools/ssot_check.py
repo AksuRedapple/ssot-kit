@@ -399,6 +399,30 @@ def steward_line(root):
     return {'ts': ts, 'tracebacks': tb, 'lines': len(tail)}
 
 
+def tests_line(root):
+    """最近一次全套回归 + 覆盖率基线（2026-11-22 立）。
+
+    规模上来之后，「测试有没有跟上」必须能在体检单上看到，而不是靠人记得跑。
+    数据源：tools/tests/.test-last.json（run_all 留痕）与 .coverage-last.json。
+    """
+    import json as _json
+    t = os.path.join(root, 'tools', 'tests', '.test-last.json')
+    c = os.path.join(root, 'tools', 'tests', '.coverage-last.json')
+    out = {'total': 0, 'pass': 0, 'fail': 0, 'ts': '-', 'cov': None}
+    try:
+        d = _json.load(open(t, encoding='utf-8'))
+        out.update(total=d.get('total', 0), **{'pass': d.get('pass', 0)},
+                   fail=d.get('fail', 0), ts=(d.get('ts') or '')[:16].replace('T', ' '))
+    except (OSError, ValueError):
+        return None
+    try:
+        cov = _json.load(open(c, encoding='utf-8'))
+        out['cov'] = cov.get('total_percent')
+    except (OSError, ValueError):
+        pass
+    return out
+
+
 def main():
     ap = cli.base_parser(epilog="【契约】意图：一次体检（台账/收件箱/索引/覆盖/接手面/契约）\n退出码：0=健康；1=有问题；2=参数错\n失败后：按 ❌ 行逐项处理\n\n示例:\n  ssot_check.py            # 六检查一屏;'== 完成(健康)' 为通过\n  ssot_check.py --json     # 机器可读", root=False)
     ap.add_argument('--root', default=os.path.expanduser('~/ssot'))
@@ -546,6 +570,16 @@ def main():
             issues += 1
         else:
             print(f"[steward] 最近一轮 {sw['ts']} · 无 traceback")
+
+    # 4c. 回归测试最近一次结果（nightly 写，体检单读）
+    tl = tests_line(root)
+    if tl:
+        cov = f" · 覆盖 {tl['cov']}%" if tl.get('cov') is not None else ''
+        if tl['fail']:
+            print(f"[tests] ❌ {tl['pass']}/{tl['total']} · 最近 {tl['ts']}{cov}")
+            issues += 1
+        else:
+            print(f"[tests] {tl['pass']}/{tl['total']} 全绿 · 最近 {tl['ts']}{cov}")
 
     # 5. 断言 lint（只报不改号）
     al = assertion_lint(root)

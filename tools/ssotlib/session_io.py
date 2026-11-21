@@ -29,6 +29,15 @@ SYSTEM_MARKERS = (
     "[SYSTEM NOTIFICATION",
     "Caveat:",
     "This session is being continued",
+    # 2026-11-22：本机 harness 自己的注入面（此前被当成人类消息，C5 虚高数倍）
+    "<paseo-system",
+    "[paseo-warmer]",
+    "[ssot-context]",
+    "[SSOT 提醒]",
+    "[SSOT 强制]",
+    "Time sampled while preparing",
+    "Current runtime context",
+    "Base directory for this skill",
 )
 
 
@@ -86,6 +95,10 @@ def iter_messages(path):
                 shape = "codex"
             # 形状 B：S1 五件套
             elif obj.get("role") in ("user", "assistant"):
+                # S1 把工具结果也写成 role=user（kind=tool_result），不滤掉会把
+                # 人类消息数虚高一到两个数量级（2026-11-22：CC 16 条被数成 630 条）
+                if obj.get("kind") in ("tool_result", "meta"):
+                    continue
                 text = _text_of(obj.get("content"))
                 ts = (obj.get("t") or obj.get("timestamp") or "")[:19].replace("T", " ")
                 shape = "s1"
