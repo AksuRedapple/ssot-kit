@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 if importlib.util.find_spec("numpy") is None:
-    print("skip: numpy not installed")
-    sys.exit(0)
+    print("skip: numpy not installed（读路径需要；写路径仍应可测）")
+    sys.exit(77)   # 77 = SKIP（run_all 协议；0 会被当成 PASS，见 A562）
 import sp_semantic  # noqa: E402
 
 # 历史日志（S2-index/search-log.jsonl @ 2026-11-19T01:47:31）里的原样路径

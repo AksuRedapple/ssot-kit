@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.1] - 2026-11-22 — 测试跳过协议（77）+ 语义测试不再假绿
+
+- **test(runner)**: `run_all.sh` 支持退出码 **77 = SKIP**（显性跳过），0=PASS、其它=FAIL；两套 runner 同协议
+- **test(semantic)**: `test_sp_semantic_sid.py` / `test_sp_semantic_status.py` 缺 numpy 时改用 77，不再用 `sys.exit(0)` 冒充通过（A562）
+- **feat(manifest)**: `tests_shipped` 纳入这两个测试（17/17 同步）
+
 ## [0.30.0] - 2026-11-22 — 测试体系：入口冒烟 / 静态闸 / 口径回归 / 每晚跑
 
 - **fix(session_io)**: S1 的 `kind=tool_result` / `kind=meta` 不再算人类消息（此前 CC 会话 15 条被数成 630 条，转生 C5 覆盖率失真）；`SYSTEM_MARKERS` 补本机注入面（paseo-system / ssot-context / SSOT 提醒 / 时间戳 / skill 正文）
