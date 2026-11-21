@@ -31,7 +31,7 @@ def drafts(dirpath):
 def existing():
     items = []
     for block in re.split(r'\n## ', open(ASSERT, encoding='utf-8').read()):
-        m = re.match(r'(A\d{3})', block)
+        m = re.match(r'(?:##\s*)?(A\d{3})', block)
         if not m:
             continue
         title = block.split('\n')[0][6:].strip()
@@ -53,8 +53,6 @@ def main():
     ex = existing()
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from sp_assert_alloc import alloc, commit
-    ids = alloc(len(keep)) if keep else []
-    last = None
     from ssotlib.index import embed
     import numpy as np
     E = np.array([np.asarray(embed.embed_one(embed.QUERY_PREFIX + t + ' ' + b), dtype=np.float32) for _, t, b in ex])
@@ -66,6 +64,8 @@ def main():
         s = float((E @ v).max())
         d['sim'] = round(s, 3)
         (dup if s >= a.thr else keep).append(d)
+    # 2026-11-22：alloc 必须在分类之后（此前引用未定义的 keep → 一跑就 NameError）
+    ids = alloc(len(keep)) if keep else []
     print(f'草稿断言 {len(ds)} · 撞正本(≥{a.thr}) {len(dup)} · 待入册 {len(keep)}')
     for d in dup[:8]:
         print(f"  ⊘ [{d['sim']}] {d['claim'][:46]}")

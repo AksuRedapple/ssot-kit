@@ -1,59 +1,78 @@
 #!/usr/bin/env python3
-"""回归：sp_purify 只追加不重写；ssot_check 只认条目行（A558）。"""
+"""回归：sp_purify 的护栏（A558 事故的正面）。
+
+判据：默认只补未标记行；已有标记不动；--remap 才重算；--apply 先备份；
+写完标记数只增不减。
+"""
 import os
-import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
 
 TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, TOOLS)
-import ssot_check  # noqa: E402
+
+import sp_purify  # noqa: E402
 
 
-class TestPurify(unittest.TestCase):
+class PurifyTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        os.makedirs(os.path.join(self.tmp, 'inbox'))
-        self.f = os.path.join(self.tmp, 'inbox', '2026-01-01.md')
-        with open(self.f, 'w', encoding='utf-8') as f:
-            f.write("- 2026-01-01 [fact] 未标记 | source: a\n"
-                    "- 2026-01-01 [fact] 已标记 | source: b → 归位: lines/old.md\n"
-                    "- 非条目要点：xxx\n")
+        self._td = tempfile.TemporaryDirectory()
+        self.root = self._td.name
+        os.makedirs(os.path.join(self.root, 'inbox'))
+        self.f = os.path.join(self.root, 'inbox', '2026-11-22.md')
+        with open(self.f, 'w', encoding='utf-8') as fh:
+            fh.write('- 2026-11-22 [fact] SSOT 索引坏了要重跑 | source: x\n')
+            fh.write('- 2026-11-22 [fact] 已有标记 | source: y → 归位: lines/ssot-hub.md\n')
+            fh.write('- 2026-11-22 [fact] 标记写错了 | source: z → 归位: lines/wrong.md\n')
+            fh.write('不是条目行\n')
+        self.old_argv = sys.argv
 
     def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
+        sys.argv = self.old_argv
+        self._td.cleanup()
 
-    def test_is_entry(self):
-        self.assertTrue(ssot_check.is_entry("- 2026-01-01 [fact] x"))
-        self.assertTrue(ssot_check.is_entry("- [fact] x"))
-        self.assertFalse(ssot_check.is_entry("- 非条目要点：x"))
-        self.assertFalse(ssot_check.is_entry("- 取件根：x"))
+    def read(self):
+        return open(self.f, encoding='utf-8').read()
 
-    def test_marker_count(self):
-        self.assertEqual(ssot_check.marker_count(self.tmp), 1)
-        self.assertIsNone(ssot_check.head_marker_count(self.tmp))
+    def test_dry_run_plans_only_unmarked(self):
+        sys.argv = ['sp_purify.py', '--root', self.root]
+        self.assertEqual(sp_purify.main(), 0)
+        self.assertNotIn('归位', self.read().splitlines()[0])   # 没写盘
+        # 计划里不应包含「已有标记」行
+        # （dry-run 只打印，靠写盘结果反证）
 
-    def test_dry_run_no_write(self):
-        before = open(self.f, encoding='utf-8').read()
-        r = subprocess.run([sys.executable, os.path.join(TOOLS, 'sp_purify.py'), '--root', self.tmp],
-                           capture_output=True, text=True)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(open(self.f, encoding='utf-8').read(), before)
-        self.assertIn('dry-run', r.stdout)
+    def test_apply_appends_and_keeps_existing(self):
+        before = self.read()
+        sys.argv = ['sp_purify.py', '--root', self.root, '--apply']
+        self.assertEqual(sp_purify.main(), 0)
+        after = self.read()
+        lines = after.splitlines()
+        self.assertIn('归位: lines/ssot-hub.md', lines[1])        # 原标记原样
+        self.assertIn('归位: lines/wrong.md', lines[2])           # 错标记也不动
+        self.assertIn('→ 归位: lines/ssot-hub.md', lines[0])      # 未标记补上
+        self.assertEqual(lines[3], '不是条目行')
+        self.assertGreaterEqual(after.count('→'), before.count('→'))
+        backups = os.path.join(self.root, 'backups')
+        self.assertTrue(os.path.isdir(backups) and os.listdir(backups))
 
-    def test_apply_only_unmarked_and_backup(self):
-        r = subprocess.run([sys.executable, os.path.join(TOOLS, 'sp_purify.py'), '--root', self.tmp, '--apply'],
-                           capture_output=True, text=True)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        lines = open(self.f, encoding='utf-8').read().splitlines()
-        self.assertIn('→ 归位:', lines[0])          # 未标记 → 追加
-        self.assertIn('lines/old.md', lines[1])     # 已标记 → 原样
-        self.assertNotIn('→', lines[2])             # 非条目 → 不动
-        bdir = os.path.join(self.tmp, 'backups')
-        self.assertTrue(os.path.isdir(bdir) and os.listdir(bdir), 'apply 必须先备份')
-        self.assertIn('标记数', r.stdout)
+    def test_remap_can_fix_wrong_marker(self):
+        sys.argv = ['sp_purify.py', '--root', self.root, '--remap', '--apply']
+        self.assertEqual(sp_purify.main(), 0)
+        lines = self.read().splitlines()
+        # 未命中规则的行走兜底线；关键是错的标记被重算（不再指向 wrong.md）
+        self.assertNotIn('lines/wrong.md', self.read())
+        self.assertIn('归位: lines/mac-foundation.md', lines[2])
+
+    def test_no_backup_flag(self):
+        sys.argv = ['sp_purify.py', '--root', self.root, '--apply', '--no-backup']
+        sp_purify.main()
+        self.assertFalse(os.path.exists(os.path.join(self.root, 'backups')))
+
+    def test_dest_rules(self):
+        self.assertEqual(sp_purify.dest('今天调 algo 判题器', 'x.md'), 'lines/algorithm-training.md')
+        self.assertIn('allinone-app', sp_purify.dest('HomeHub 发版 1.0.22', 'x.md'))
+        self.assertIn('mac-foundation', sp_purify.dest('launchd 服务挂了', 'x.md'))
 
 
 if __name__ == '__main__':

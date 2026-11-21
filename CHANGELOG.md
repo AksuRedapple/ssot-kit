@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.2] - 2026-11-22 — P0 工具测试带出的三个 bug
+
+- **fix(sp_assert_ingest)**: `alloc()` 在分类之前引用未定义的 `keep` → 一跑就 `NameError`（断言导入从未真正工作）；`existing()` 兼容文件以 `## A001` 开头（首块不会漏）
+- **fix(sp_mail)**: `MCP()` 构造移到 try 内——MCP 服务没起时邮件进待发队列，不再直接丢
+- **feat(steward_freshness)**: 支持 `SSOT_ROOT` 覆盖，便于用临时根做回归
+- **test**: `test_sp_purify.py` 随包（提纯器护栏：只追加、remap 显式、备份、单调）
+
 ## [0.30.1] - 2026-11-22 — 测试跳过协议（77）+ 语义测试不再假绿
 
 - **test(runner)**: `run_all.sh` 支持退出码 **77 = SKIP**（显性跳过），0=PASS、其它=FAIL；两套 runner 同协议
