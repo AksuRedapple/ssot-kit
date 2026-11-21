@@ -375,6 +375,30 @@ def line_drift(root):
     return out
 
 
+def steward_line(root):
+    """最近一轮 steward 是否有 traceback。
+
+    2026-11-21：sp_convert 因 NameError 停摆 29 小时，steward 每一步都失败，
+    但 `ssot_check` 只显示「健康」——失败只躺在 alerts/steward.log。
+    """
+    p = os.path.join(root, 'alerts', 'steward.log')
+    try:
+        lines = open(p, encoding='utf-8', errors='replace').read().splitlines()
+    except OSError:
+        return None
+    idx = None
+    for i in range(len(lines) - 1, -1, -1):
+        if 'steward run begin' in lines[i]:
+            idx = i
+            break
+    if idx is None:
+        return None
+    tail = lines[idx:]
+    tb = sum(1 for l in tail if l.startswith('Traceback (most recent call last)'))
+    ts = tail[0].split('==')[0].strip() or '-'
+    return {'ts': ts, 'tracebacks': tb, 'lines': len(tail)}
+
+
 def main():
     ap = cli.base_parser(epilog="【契约】意图：一次体检（台账/收件箱/索引/覆盖/接手面/契约）\n退出码：0=健康；1=有问题；2=参数错\n失败后：按 ❌ 行逐项处理\n\n示例:\n  ssot_check.py            # 六检查一屏;'== 完成(健康)' 为通过\n  ssot_check.py --json     # 机器可读", root=False)
     ap.add_argument('--root', default=os.path.expanduser('~/ssot'))
@@ -513,6 +537,15 @@ def main():
         print(f'[memload] MEMORY.md {mem_b:,}B（{flag}）')
         if mem_b > MEM_WARN:
             issues += 1
+
+    # 4b. 值守最近一轮是否带 traceback（失败不能只躺在 alerts/steward.log）
+    sw = steward_line(root)
+    if sw:
+        if sw['tracebacks']:
+            print(f"[steward] ❌ 最近一轮 {sw['ts']}：{sw['tracebacks']} 处 traceback（入口失败会静默）")
+            issues += 1
+        else:
+            print(f"[steward] 最近一轮 {sw['ts']} · 无 traceback")
 
     # 5. 断言 lint（只报不改号）
     al = assertion_lint(root)

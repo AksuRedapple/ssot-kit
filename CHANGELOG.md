@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.29.1] - 2026-11-22 — 修复 sp_convert 入口 + 入口冒烟闸
+
+- **fix(sp_convert)**: 恢复被分层重构误删的模块级常量块（`VAULT` / `SRCS` / `CUR_SRC` / `S0` / `S1` / `CONVERTER`）与 `contract_schema()` / `lstr()`。此前库测试全绿，但 `main()` 一跑就 `NameError`，steward 的三条转换（qoder/cc/pi）静默失败 29.5 小时（A561）
+- **fix(sp_subagent)**: 补 `from ssotlib import cli`——`cli.warn_once` 在坏 JSON 行路径上是未定义名字（同类潜伏雷，由新静态闸抓到）
+- **test**: 新增 `tools/tests/undefined_names_test.py`（标准库 `symtable` 扫全部工具与 `ssotlib` 的未定义名字）与 `tools/tests/test_sp_convert_entry.py`（临时目录 + 最小 cc 会话真跑 `main()`，断言 S1 五件套）
+- **feat(ssot_check)**: 新增 `[steward]` 行——读 `alerts/steward.log` 最近一轮，有 traceback 即计入「需处理」；守值失败不再只躺在日志里
+
 ## [0.29.0] - 2026-11-20 — 异常处理第四批：探测语义
 
 - **feat(cli)**: 新增 `cli.probe_warn`——探测失败分级：未安装/未运行（`FileNotFoundError` / `ConnectionRefusedError`）静默，超时/权限/协议错才告警一次

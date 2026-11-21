@@ -22,6 +22,36 @@ from ssotlib import pending as sp_pending  # noqa: E402
 from ssotlib.ingest import DROP_TYPES, SECRET_RX, local, norm_content, scrub  # noqa: E402,F401
 from ssotlib import cli  # noqa: E402
 
+VAULT = os.path.expanduser('~/ssot')
+SRCS = {
+    'qoder': ('evidence/qoder/S0-archive/qoder-projects', 'evidence/qoder/S1-sessions'),
+    'cc':    ('evidence/cc/S0-archive/claude-projects',   'evidence/cc/S1-sessions'),
+    'pi':    ('evidence/pi/S0-archive/pi-sessions',       'evidence/pi/S1-sessions'),
+    'dsh':   ('evidence/dsh/S0-archive/dsh-sessions',     'evidence/dsh/S1-sessions'),
+}
+CUR_SRC = 'qoder'
+S0 = os.path.join(VAULT, SRCS[CUR_SRC][0])
+S1 = os.path.join(VAULT, SRCS[CUR_SRC][1])
+CONVERTER = 'sp_convert v0.6'
+
+
+def lstr(ts, fmt='%m-%d %H:%M'):
+    d = local(ts)
+    return d.strftime(fmt) if d else str(ts)[:16]
+
+
+def contract_schema():
+    """实例契约号（profile/contract.json）；无契约文件→None（旧实例不盖章）。
+
+    S1 meta 的 schema 必须由生成器自己盖（契约 v2 · 见 A530）。
+    """
+    try:
+        d = json.load(open(os.path.join(VAULT, 'profile', 'contract.json'), encoding='utf-8'))
+        return int(d.get('contract', 0)) or None
+    except Exception:
+        return None
+
+
 def slugify(s, n=40):
     s = re.sub(r'[^\w\u4e00-\u9fff\-]+', '-', s).strip('-')
     return (s[:n].strip('-') or 'session')
