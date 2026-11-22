@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.3] - 2026-11-22 — 恢复 sp_llm 旧 API 与预算/CLI（半截重构修复）
+
+- **fix(sp_llm)**: 新引擎（run/run_json）替换了旧 `run_llm`，但 7 个下游工具（detect/select/investigate/eval/distill/distill_batch/extract）仍 import 旧名 → 全部 ImportError。补回 `run_llm(prompt, schema_path, tag=, model=)` 兼容层（走 run_json + schema.required 校验 + ZB_LLM_MOCK）、`--ping/--selftest` CLI、`_budget/_log`（ZB_LLM_BUDGET 生效）
+- **test**: `sp_llm_test.sh` 的预算/自测两段恢复通过；`test_p2_smoke.py` 7 个 LLM 工具恢复可启动
+
 ## [0.30.2] - 2026-11-22 — P0 工具测试带出的三个 bug
 
 - **fix(sp_assert_ingest)**: `alloc()` 在分类之前引用未定义的 `keep` → 一跑就 `NameError`（断言导入从未真正工作）；`existing()` 兼容文件以 `## A001` 开头（首块不会漏）
