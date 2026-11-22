@@ -228,7 +228,8 @@ def run(args):
             flag = ' ⚠️CONFLICT' if c['state'] == 'conflict' else ''
             f.write(f"## [{c['score']}] {c['type']}{flag} · {c['id']}\n\n{rstrip_lines(c['claim'])}\n\n")
             for e in c['evidence'][:3]:
-                f.write(f"- `{e['session']}` L{e['line']} ({e['role']}) — {rstrip_lines(e['quote'][:100])}\n")
+                f.write(f"- `{e.get('session', '?')}` L{e.get('line', 0)} "
+                        f"({e.get('role', '?')}) — {rstrip_lines(str(e.get('quote') or '')[:100])}\n")
             f.write('\n')
     print(f'候选 {len(idx)} 条(candidate {sum(1 for x in idx.values() if x["state"]=="candidate")} / '
           f'conflict {sum(1 for x in idx.values() if x["state"]=="conflict")});新增 {added},合并证据 {merged}')

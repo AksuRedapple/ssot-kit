@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.6] - 2026-11-22 — sp_candidates 审阅表对缺字段证据的健壮性
+
+- **fix(sp_candidates)**: `run()` 写 review.md 时直接取 `e['session']/e['line']/e['role']/e['quote']`。账本里若有早期/外部写入的证据缺 `quote`，整次抽取会在写审阅表时 `KeyError`（候选已入账、审阅表却没生成）。改为 `.get()` 带默认值
+- **test**: 本机覆盖率 84.0% → **86.5%**（98 个测试文件；新增 candidates 主循环 / LLM 簇 / daemon 协议 / skilltrim 四组）
+
 ## [0.30.5] - 2026-11-22 — sp_triage 返回值形状修复（测试带出）
 
 - **fix(sp_triage)**: `extract` 的两条「0 候选」分支把 `write_table()` 的 `(dst, rows)` 直接赋给了 `dst`，返回值变成嵌套二元组。调用方按 `(dst, items, state)` 解包会拿到元组当路径。改为 `dst, _rows = write_table(...)`
