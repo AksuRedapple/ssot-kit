@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.5] - 2026-11-22 — sp_triage 返回值形状修复（测试带出）
+
+- **fix(sp_triage)**: `extract` 的两条「0 候选」分支把 `write_table()` 的 `(dst, rows)` 直接赋给了 `dst`，返回值变成嵌套二元组。调用方按 `(dst, items, state)` 解包会拿到元组当路径。改为 `dst, _rows = write_table(...)`
+- **test**: 本机新增 8 个测试文件（notify / llm_eval / ocgo_ak / subagent / winjob / triage / llm 引擎 / semantic hybrid），覆盖率 77.7% → 84.0%（本机私有，不进 kit 子集）
+
 ## [0.30.4] - 2026-11-22 — 入口冒烟测试的 CI 隔离修复
 
 - **test(sp_convert)**: 测试里只隔离了 `pending.SSOT/MARK`，没有隔离模块常量 `LOCK`（import 时算死）→ CI（`HOME` 下无 `~/ssot`）报 `FileNotFoundError: .../pending-index.json.lock`。补 `LOCK` 的保存/恢复，并用空 `HOME` 预演通过

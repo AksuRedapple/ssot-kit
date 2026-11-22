@@ -140,14 +140,14 @@ def extract(sid, since=None, top=40, legacy=False):
         items = extract_from_ledger(sid, since, top)
         total, eligible = ledger_counts(sid)
         if total == 0:
-            dst = write_table(sid, [], source_note='账本 candidates.jsonl(唯一)',
-                              reason='uncollected')
+            dst, _rows = write_table(sid, [], source_note='账本 candidates.jsonl(唯一)',
+                                     reason='uncollected')
             print('⚠ 该会话未进账本（S1/导出器未采集），不是“0 候选”')
             print('  先查 S1：ls -d ~/ssot/evidence/*/S1-sessions/*<sid8>*')
             return dst, [], 'uncollected'
         if not items:
-            dst = write_table(sid, [], source_note='账本 candidates.jsonl(唯一)',
-                              reason='rejected')
+            dst, _rows = write_table(sid, [], source_note='账本 candidates.jsonl(唯一)',
+                                     reason='rejected')
             print(f'候选 0 条（账本有 {total} 条，均被拒/去重；不是低分）')
             return dst, [], 'rejected'
         dst, items = write_table(sid, items, source_note='账本 candidates.jsonl(唯一)')
