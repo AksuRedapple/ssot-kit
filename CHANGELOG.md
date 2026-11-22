@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.8] - 2026-11-22 — 新增 sp_s0scrub（证据层就地脱敏）
+
+- **feat(sp_s0scrub)**: `sp_s0scan` 只能报命中，不能消除。新工具按 `ssotlib.ingest.SECRET_RX` 就地替换为 `[REDACTED-SECRET]`：默认 dry-run、`--apply` 才落盘；范围默认**整个 evidence/**（S0 + S1 raw.jsonl 副本 + transcript）；保留 mtime（避免增量全量重转）；JSONL 逐行校验后才写；每次写清单（只有路径/计数/前后 sha256）
+- **fix**: 实测「只清 S0」会漏 43% —— S1 `raw.jsonl` 逐字副本另有 855 处 / 59 文件（A574）
+- **test**: 新增 `test_sp_s0scrub.py`（dry-run/幂等/JSONL 跳过/mtime/清单/scope）
+
 ## [0.30.7] - 2026-11-22 — 覆盖率冲 90% 带出的五个修复
 
 - **fix(sp_convert / sp_dsh)**: 增量判变把带小数的源 mtime 与只到秒的 `converted_at` 直接比，同一秒内写完再转的会话每次都判变（增量空转）。取整到秒再比
