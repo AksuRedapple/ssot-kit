@@ -198,7 +198,11 @@ def log_op(rec):
 
 
 def retire(manifest, sids, reason, operator, apply=False, as_json=False):
-    items = read_manifest(manifest) if manifest else find_sids(sids or [])
+    try:
+        items = read_manifest(manifest) if manifest else find_sids(sids or [])
+    except OSError as e:
+        print(f'清单读不到：{e}', file=sys.stderr)
+        return 2
     if not items:
         print('没有可退出的会话', file=sys.stderr)
         return 2
@@ -256,7 +260,11 @@ def retire(manifest, sids, reason, operator, apply=False, as_json=False):
 
 
 def verify(manifest, as_json=False):
-    items = read_manifest(manifest)
+    try:
+        items = read_manifest(manifest)
+    except OSError as e:
+        print(f'清单读不到：{e}', file=sys.stderr)
+        return 2
     db = resolve_db()
     con = sqlite3.connect(f'file:{db}?mode=ro', uri=True) if os.path.exists(db) else None
     retired, _ = sp_policy.load_retired(SSOT)

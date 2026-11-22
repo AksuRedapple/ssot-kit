@@ -196,6 +196,8 @@ def dispatch_stats(root):
 def citation_stats(root):
     """(被引用断言数, 总数) —— 知识是否被消费"""
     ap = os.path.join(root, 'knowledge', 'assertions.md')
+    if not os.path.exists(ap):
+        return 0, 0
     text = open(ap, encoding='utf-8').read()
     all_ids = set(re.findall(r'^## (A\d{3})', text, re.M))
     cited = set()
@@ -612,13 +614,12 @@ def main():
     else:
         print('[build] 无 BUILD.json（索引尚未记录 built_at_commit）')
 
-    pending = pending_line(root)
-    if pending:
-        print(f"[pending-index] {pending.get('sessions', 0)} 会话 / ~{pending.get('est_blocks', 0)} 块"
-              f" · since {pending.get('created_at', '-')}"
-              + (f" · 已索引待压实" if pending.get('pack_stale') else ""))
-    else:
-        pending = {}
+    # 注意：这里的变量不要复用上面的 pending（那是未提纯条数 int）——2026-11-22 修
+    pend_idx = pending_line(root)
+    if pend_idx:
+        print(f"[pending-index] {pend_idx.get('sessions', 0)} 会话 / ~{pend_idx.get('est_blocks', 0)} 块"
+              f" · since {pend_idx.get('created_at', '-')}"
+              + (f" · 已索引待压实" if pend_idx.get('pack_stale') else ""))
 
     # 7. 草稿/未尽/演练
     drafts = len(glob.glob(os.path.join(root, 'sessions', '_pending', '*.md')))
@@ -642,8 +643,8 @@ def main():
         notes.append(f"索引{lag}")
     if drafts:
         notes.append(f"草稿 {drafts}")
-    if pending:
-        notes.append(f"待索引 {pending.get('sessions', 0)} 会话")
+    if pend_idx:
+        notes.append(f"待索引 {pend_idx.get('sessions', 0)} 会话")
     tail = f"{issues} 项需处理" if issues else "健康"
     if notes:
         tail += "；提示 " + "、".join(notes)

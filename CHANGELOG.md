@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.7] - 2026-11-22 — 覆盖率冲 90% 带出的五个修复
+
+- **fix(sp_convert / sp_dsh)**: 增量判变把带小数的源 mtime 与只到秒的 `converted_at` 直接比，同一秒内写完再转的会话每次都判变（增量空转）。取整到秒再比
+- **fix(ssot_check)**: `citation_stats` 在缺 `knowledge/assertions.md` 的新实例上直接 `FileNotFoundError`；改为返回 (0,0)。另修 `pending` 变量被 `pending-index` 字典覆盖——`--strict` 会 `dict > int` 崩，`--report` 的 inbox 数字会打成字典
+- **fix(sp_mail)**: `--flush` 被放在 `if a.send` 里面，帮助里却写「重发队列」（用户不加 `--send` 就静默不执行）。移到 `--send` 判断之前
+- **fix(sp_exit)**: `--retire/--verify` 指向不存在的清单会直接 traceback；改为打印「清单读不到」并返回 2
+- **test**: 本机覆盖率 86.5% → **90.1%**（103 个测试文件）
+
 ## [0.30.6] - 2026-11-22 — sp_candidates 审阅表对缺字段证据的健壮性
 
 - **fix(sp_candidates)**: `run()` 写 review.md 时直接取 `e['session']/e['line']/e['role']/e['quote']`。账本里若有早期/外部写入的证据缺 `quote`，整次抽取会在写审阅表时 `KeyError`（候选已入账、审阅表却没生成）。改为 `.get()` 带默认值

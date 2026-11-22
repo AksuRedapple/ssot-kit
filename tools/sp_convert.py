@@ -481,7 +481,9 @@ def main():
             try:
                 ca = json.load(open(mp)).get('converted_at', '')
                 ca_epoch = datetime.datetime.fromisoformat(ca).timestamp()
-                if os.path.getmtime(p) > ca_epoch:
+                # converted_at 只到秒；源 mtime 带小数。直接比会让「同一秒内写完再转」
+                # 的会话每次都判变（实测 2026-11-22）。取整到秒再比。
+                if int(os.path.getmtime(p)) > int(ca_epoch):
                     keep.append(p)  # 源有更新
             except Exception:
                 keep.append(p)
