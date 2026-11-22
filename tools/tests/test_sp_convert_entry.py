@@ -44,11 +44,12 @@ class ConvertEntryTest(unittest.TestCase):
 
             old = (sp_convert.VAULT, dict(sp_convert.SRCS), sp_convert.S0,
                    sp_convert.S1, sp_convert.CUR_SRC, sys.argv)
-            old_pending = (sp_pending.SSOT, sp_pending.MARK)
+            old_pending = (sp_pending.SSOT, sp_pending.MARK, getattr(sp_pending, 'LOCK', None))
             try:
                 # 待索引标记也要隔离，否则测试会把真实 pending-index.json 改成 2 会话
                 sp_pending.SSOT = tmp
                 sp_pending.MARK = os.path.join(tmp, 'S2-index', 'pending-index.json')
+                sp_pending.LOCK = sp_pending.MARK + '.lock'
                 sp_convert.VAULT = tmp
                 sp_convert.SRCS['cc'] = (os.path.relpath(s0, tmp),
                                          os.path.relpath(s1, tmp))
@@ -61,7 +62,9 @@ class ConvertEntryTest(unittest.TestCase):
             finally:
                 (sp_convert.VAULT, sp_convert.SRCS, sp_convert.S0,
                  sp_convert.S1, sp_convert.CUR_SRC, sys.argv) = old
-                sp_pending.SSOT, sp_pending.MARK = old_pending
+                sp_pending.SSOT, sp_pending.MARK, _lk = old_pending
+                if _lk is not None:
+                    sp_pending.LOCK = _lk
 
             outs = [x for x in os.listdir(s1) if 'deadbeef' in x]
             self.assertEqual(len(outs), 1, f'S1 产物数不对: {outs}')

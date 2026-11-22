@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.4] - 2026-11-22 — 入口冒烟测试的 CI 隔离修复
+
+- **test(sp_convert)**: 测试里只隔离了 `pending.SSOT/MARK`，没有隔离模块常量 `LOCK`（import 时算死）→ CI（`HOME` 下无 `~/ssot`）报 `FileNotFoundError: .../pending-index.json.lock`。补 `LOCK` 的保存/恢复，并用空 `HOME` 预演通过
+- **chore**: 两处 convert 测试统一隔离 pending 状态，避免污染真实 `pending-index.json`
+
 ## [0.30.3] - 2026-11-22 — 恢复 sp_llm 旧 API 与预算/CLI（半截重构修复）
 
 - **fix(sp_llm)**: 新引擎（run/run_json）替换了旧 `run_llm`，但 7 个下游工具（detect/select/investigate/eval/distill/distill_batch/extract）仍 import 旧名 → 全部 ImportError。补回 `run_llm(prompt, schema_path, tag=, model=)` 兼容层（走 run_json + schema.required 校验 + ZB_LLM_MOCK）、`--ping/--selftest` CLI、`_budget/_log`（ZB_LLM_BUDGET 生效）
