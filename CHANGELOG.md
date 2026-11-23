@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.11] - 2026-11-23 — ssot_check 报告变量遮蔽修复
+
+- **fix(ssot_check)**: `[install-drift]` 里 `stale` 列表覆盖了主流程的「过期线页」`stale`，`--report` 生成时 `", ".join()` 收到 tuple → `TypeError`（steward 每轮 report 都失败）。变量改名 `stale_items`；新增带过期线页的 `--report` 回归
+- **test**: `test_ssot_check_main` 23 个用例
+
 ## [0.30.10] - 2026-11-23 — 修复工具补完 + secrets 单测
 
 - **feat(sp_s0repair)**: 新增 `--redo-fallback`（对已退化的 `sk-REDACTED` 再用语料找一次精确原串）与 `--restore-originals`（按 manifest 前哈希从 harness 原件恢复 S0）

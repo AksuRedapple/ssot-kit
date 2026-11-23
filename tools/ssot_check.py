@@ -660,7 +660,7 @@ def main():
     # 8. 安装漂移（2026-11-23 · P0：子包漏装）
     drift = install_drift(root)
     blocking = [x for x in drift if x[1] != 'stale']
-    stale = [x for x in drift if x[1] == 'stale']
+    stale_items = [x for x in drift if x[1] == 'stale']
     if blocking:
         print(f"[install-drift] ❌ {len(blocking)} 项框架文件缺失（先跑 update.sh）：")
         for rel, kind, why in blocking[:10]:
@@ -668,7 +668,7 @@ def main():
         if len(blocking) > 10:
             print(f"  … 其余 {len(blocking) - 10} 项")
         issues += 1
-    for rel, kind, why in stale[:5]:
+    for rel, kind, why in stale_items[:5]:
         print(f"[install-drift] ⚠ {rel}：{why}（本地定制可忽略；由 install-steward.sh 管理）")
     if not drift:
         print("[install-drift] 框架文件完整")
