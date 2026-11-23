@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.10] - 2026-11-23 — 修复工具补完 + secrets 单测
+
+- **feat(sp_s0repair)**: 新增 `--redo-fallback`（对已退化的 `sk-REDACTED` 再用语料找一次精确原串）与 `--restore-originals`（按 manifest 前哈希从 harness 原件恢复 S0）
+- **perf(secrets)**: `classify` 改为 O(n) 字面量查找（267MB 转录 56s → 3.7s），`sp_s0scrub` 加 ripgrep 文件级预筛（5.8GB/2 万文件 → 273 候选，9s）
+- **test**: 新增 `test_secrets.py`（high/medium/low、词边界、白名单、向后兼容）
+
 ## [0.30.9] - 2026-11-23 — 第五批反馈：同步 P0 + 扫描分级 + 检索/采集缺口
 
 - **fix(P0/安装)**: `setup.sh`/`update.sh` 改用 `cp -R` 递归同步 `tools/ssotlib/`（含 v0.30 的 `index/` 子包）。此前只拷 `*.py`，全新安装与升级都会缺子包 → `sp_semantic` ImportError

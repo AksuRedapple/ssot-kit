@@ -59,11 +59,12 @@ class Corpus:
         self.logs = logs
         self._cache = {}
 
-    def for_sid(self, sid8, exclude=None):
+    def for_sid(self, sid8, exclude=None, include_index=False):
         if not sid8:
             return []
-        if sid8 in self._cache:
-            return self._cache[sid8]
+        key = (sid8, include_index)
+        if key in self._cache:
+            return self._cache[key]
         texts = []
 
         def _add(f):
@@ -107,7 +108,7 @@ class Corpus:
             except OSError:
                 pass
         # 5) 索引块（最后兜底；旧转录可能仍保留未脱敏文本）
-        if not texts:
+        if include_index or not texts:
             try:
                 from ssotlib.index import layout
                 db = layout.resolve_db()
@@ -120,7 +121,7 @@ class Corpus:
                     con.close()
             except Exception:
                 pass
-        self._cache[sid8] = texts
+        self._cache[key] = texts
         return texts
 
 
@@ -191,6 +192,39 @@ def recover(text, corpus, max_ctx=40):
     return ''.join(out), exact, fallback
 
 
+def redo_fallback(text, corpus, mark=FALLBACK, max_ctx=40):
+    """把已退化的 `sk-REDACTED` 再用语料找一次；找不到就保留。"""
+    out, pos, exact = [], 0, 0
+    for m in re.finditer(re.escape(mark), text):
+        if m.start() == 0 or not text[m.start() - 1].isalnum():
+            continue
+        found = None
+        nxt = text[m.end()] if m.end() < len(text) else ''
+        for ctx in (max_ctx, 24, 16, 10):
+            left = text[max(0, m.start() - ctx):m.start()]
+            cands = set()
+            for blob in corpus:
+                cands |= _candidates(blob, left, nxt)
+            if len(cands) == 1:
+                found = cands.pop()
+                break
+        if not found:
+            mw = re.search(r'([A-Za-z0-9_-]{1,30})$', text[:m.start()])
+            if mw:
+                cands = set()
+                for blob in corpus:
+                    cands |= _candidates(blob, mw.group(1), nxt)
+                if len(cands) == 1:
+                    found = cands.pop()
+        if found:
+            out.append(text[pos:m.start()])
+            out.append(found)
+            pos = m.end()
+            exact += 1
+    out.append(text[pos:])
+    return ''.join(out), exact
+
+
 def rows_from_manifest(path):
     d = json.load(open(path, encoding='utf-8'))
     return d.get('rows') or []
@@ -236,6 +270,8 @@ def main():
     ap.add_argument('--sid', default=None)
     ap.add_argument('--restore-originals', action='store_true',
                     help='先从 harness 原始目录恢复哈希一致的 S0（不修词）')
+    ap.add_argument('--redo-fallback', action='store_true',
+                    help='把 sk-REDACTED 再用修复后的副本找一次（只补精确，不改其他）')
     ap.add_argument('--all-s1', action='store_true',
                     help='扫描全部 S1 transcript/raw（含历史误伤），不只 manifest 行')
     ap.add_argument('--quiet', action='store_true')
@@ -252,6 +288,59 @@ def main():
                     rows.append({'path': os.path.relpath(f, SSOT), 'layer': 'S1'})
     else:
         rows = rows_from_manifest(paths[-1])
+    corpus = Corpus()
+    if a.redo_fallback:
+        n_files = n_exact = 0
+        out_rows = []
+        layers = {x.strip() for x in a.layers.split(',')}
+        scan = []
+        for f in glob.glob(os.path.join(SSOT, 'evidence', '**', '*'), recursive=True):
+            if not os.path.isfile(f) or not f.endswith(('.jsonl', '.json', '.md', '.txt')):
+                continue
+            rel = os.path.relpath(f, SSOT)
+            layer = 'S0' if 'S0-archive' in rel else (
+                'S1-raw' if rel.endswith('raw.jsonl') else 'S1')
+            if layer not in layers:
+                continue
+            try:
+                if FALLBACK in open(f, encoding='utf-8', errors='replace').read():
+                    scan.append({'path': rel, 'layer': layer})
+            except OSError:
+                pass
+        rows = scan
+        for r in rows:
+            if r.get('layer') not in {x.strip() for x in a.layers.split(',')}:
+                continue
+            p = os.path.join(SSOT, r['path'])
+            if not os.path.isfile(p):
+                continue
+            text = open(p, encoding='utf-8', errors='replace').read()
+            if FALLBACK not in text:
+                continue
+            new, exact = redo_fallback(text, corpus.for_sid(sid8_of(p), exclude=p, include_index=True))
+            if exact:
+                n_files += 1
+                n_exact += exact
+                out_rows.append({'path': r['path'], 'exact': exact})
+                if not a.quiet:
+                    print(f'  {exact:3d} 精确  {r["path"]}')
+                if a.apply:
+                    st = os.stat(p)
+                    tmp = p + '.repair.tmp'
+                    with open(tmp, 'w', encoding='utf-8') as f:
+                        f.write(new)
+                    os.replace(tmp, p)
+                    os.utime(p, (st.st_atime, st.st_mtime))
+        print(f'{"APPLY" if a.apply else "DRY-RUN"} redo-fallback：{n_files} 文件 / 精确 {n_exact}')
+        if a.apply:
+            os.makedirs(os.path.join(SSOT, 'alerts'), exist_ok=True)
+            out = os.path.join(SSOT, 'alerts', 's0-repair-fallback-%s.json' %
+                               datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
+            json.dump({'ts': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                       'files': n_files, 'exact': n_exact, 'rows': out_rows},
+                      open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            print(f'清单 → {os.path.relpath(out, SSOT)}')
+        return 0
     if a.restore_originals:
         restored = restore_originals(rows, apply=a.apply)
         print(f'{"APPLY" if a.apply else "DRY-RUN"} restore-originals：{len(restored)} 个文件'
@@ -269,7 +358,6 @@ def main():
         print(f'清单 → {os.path.relpath(out, SSOT)}')
         return 0
     layers = {x.strip() for x in a.layers.split(',')}
-    corpus = Corpus()
     out_rows = []
     n_files = n_exact = n_fb = 0
     for r in rows:

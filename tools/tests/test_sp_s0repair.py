@@ -50,6 +50,13 @@ class PureTest(unittest.TestCase):
         self.assertEqual(new, 'x ta' + 'sk' + '-cafe1234.json y a' + 'sk' + '-at-poorest-assessment y')
         self.assertEqual((exact, fb), (2, 0))
 
+    def test_redo_fallback_exact_and_keep(self):
+        text = 'x task-REDACTED.json y ask-REDACTED z'
+        corpus = ['x task-deadbeef.json y']
+        new, exact = R.redo_fallback(text, corpus)
+        self.assertEqual(new, 'x task-deadbeef.json y ask-REDACTED z')
+        self.assertEqual(exact, 1)
+
     def test_sid8_of(self):
         self.assertEqual(R.sid8_of(
             'evidence/cc/S1-sessions/2026-11-22-deadbeef-x/transcript.jsonl'), 'deadbeef')
