@@ -18,7 +18,7 @@ class TestScrub(unittest.TestCase):
     def test_secret_shapes(self):
         cases = [
             'sk-' + 'a' * 24,
-            'sk-' + '1234567890abcdef',
+            'api_key: sk-' + '1234567890abcdef',
             'ghp_' + 'a' * 32,
             'github_pat_' + 'b' * 32,
             'AKIA' + 'C' * 16,

@@ -425,6 +425,43 @@ def tests_line(root):
     return out
 
 
+def install_drift(root):
+    """框架件漂移：实例 tools/ 与 kit 的 ssotlib 树 / 入口脚本对账。
+
+    2026-11-23（批次 5 P0）：setup.sh/update.sh 曾只拷 ssotlib/*.py，
+    v0.30 拆出的 ssotlib/index/ 子包安装后永久缺失——语义检索 ImportError。
+    这里把「kit 有、实例无」变成体检单上的阻断项，不再靠人记得。
+    """
+    issues = {}
+    kit = os.environ.get('SSOT_KIT') or os.path.expanduser('~/qoder_place/ssot-kit')
+    tools = os.path.join(root, 'tools')
+    # 必需子包：实例有 sp_semantic 就必须有 ssotlib/index
+    if os.path.exists(os.path.join(tools, 'sp_semantic.py')):
+        rel = 'tools/ssotlib/index/__init__.py'
+        if not os.path.exists(os.path.join(root, rel)):
+            issues[rel] = ('missing', '语义检索依赖的子包缺失')
+    ktools = os.path.join(kit, 'tools')
+    if os.path.isdir(os.path.join(ktools, 'ssotlib')):
+        for dp, dns, fns in os.walk(os.path.join(ktools, 'ssotlib')):
+            dns[:] = [d for d in dns if d != '__pycache__']
+            for fn in fns:
+                if not fn.endswith('.py'):
+                    continue
+                rel = os.path.relpath(os.path.join(dp, fn), kit)
+                if not os.path.exists(os.path.join(root, rel)):
+                    issues[rel] = ('missing', 'kit 有、实例无（先跑 update.sh）')
+    for rel in ('tools/steward.sh', 'tools/session-gate.sh'):
+        a = os.path.join(root, rel)
+        b = os.path.join(kit, rel)
+        if os.path.exists(a) and os.path.exists(b):
+            try:
+                if open(a, 'rb').read() != open(b, 'rb').read():
+                    issues[rel] = ('stale', '内容与 kit 不一致（update.sh 不同步此文件）')
+            except OSError:
+                pass
+    return [(rel, kind, why) for rel, (kind, why) in sorted(issues.items())]
+
+
 def main():
     ap = cli.base_parser(epilog="【契约】意图：一次体检（台账/收件箱/索引/覆盖/接手面/契约）\n退出码：0=健康；1=有问题；2=参数错\n失败后：按 ❌ 行逐项处理\n\n示例:\n  ssot_check.py            # 六检查一屏;'== 完成(健康)' 为通过\n  ssot_check.py --json     # 机器可读", root=False)
     ap.add_argument('--root', default=os.path.expanduser('~/ssot'))
@@ -503,14 +540,20 @@ def main():
     archive_note = ''
     ar = archive_line(root)
     if ar:
-        hit = int(ar.get('files_hit') or 0)
+        by = ar.get('by_confidence') or {}
+        hit = int(ar.get('high_files', ar.get('files_hit') or 0))
         pol = ar.get('_policy') or {}
         ptxt = ''
         if pol:
             ptxt = (f" · policy={pol.get('sensitivity', 'high')}"
                     f"/scrub={'on' if pol.get('scrub_default') else 'off'}")
-        print(f"[archive] S0 密钥形态 {hit}/{ar.get('scanned', 0)} 文件 · {ar.get('matches', 0)} 处"
-              + ptxt + (f" · 样本见 alerts/s0-scan.json" if hit else ''))
+        extra = ''
+        if by:
+            extra = (f" · high {by.get('high', 0)} / medium {by.get('medium', 0)}"
+                     f" / low {by.get('low', 0)}（low 只报告）")
+        print(f"[archive] S0 密钥 high {hit}/{ar.get('scanned', 0)} 文件"
+              f" · {by.get('high', ar.get('matches', 0))} 处" + extra + ptxt
+              + (" · 见 alerts/s0-scan.json" if hit else ''))
         if hit:
             archive_note = f"S0 密钥 {hit} 文件"
 
@@ -613,6 +656,22 @@ def main():
               (f'（{lag}）' if lag else ''))
     else:
         print('[build] 无 BUILD.json（索引尚未记录 built_at_commit）')
+
+    # 8. 安装漂移（2026-11-23 · P0：子包漏装）
+    drift = install_drift(root)
+    blocking = [x for x in drift if x[1] != 'stale']
+    stale = [x for x in drift if x[1] == 'stale']
+    if blocking:
+        print(f"[install-drift] ❌ {len(blocking)} 项框架文件缺失（先跑 update.sh）：")
+        for rel, kind, why in blocking[:10]:
+            print(f"  - {rel}（{why}）")
+        if len(blocking) > 10:
+            print(f"  … 其余 {len(blocking) - 10} 项")
+        issues += 1
+    for rel, kind, why in stale[:5]:
+        print(f"[install-drift] ⚠ {rel}：{why}（本地定制可忽略；由 install-steward.sh 管理）")
+    if not drift:
+        print("[install-drift] 框架文件完整")
 
     # 注意：这里的变量不要复用上面的 pending（那是未提纯条数 int）——2026-11-22 修
     pend_idx = pending_line(root)

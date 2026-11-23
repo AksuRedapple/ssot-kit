@@ -57,11 +57,39 @@ class Base(unittest.TestCase):
 
 class ScrubTest(Base):
     def test_scrub_text_counts(self):
-        new, counts, total = S.scrub_text(f'a {SECRET} b {BEARER}')
+        new, by, total, skipped = S.scrub_text(f'a {SECRET} b {BEARER}', level='medium')
         self.assertNotIn(SECRET, new)
+        self.assertNotIn(BEARER, new)
         self.assertIn('[REDACTED-SECRET]', new)
         self.assertEqual(total, 2)
-        self.assertEqual(sum(counts), 2)
+        self.assertEqual(by, {'high': 1, 'medium': 1, 'low': 0})
+        self.assertEqual(skipped, 0)
+
+    def test_default_high_skips_medium_and_low(self):
+        text = f'a {SECRET} b {BEARER} c api_key: sk-deadbeef'
+        new, by, total, _ = S.scrub_text(text)
+        self.assertNotIn(SECRET, new)
+        self.assertIn(BEARER, new)              # medium 默认不动
+        self.assertIn('api_key: sk-deadbeef', new)  # medium 默认不动
+        self.assertEqual(by['high'], 1)
+        self.assertEqual(total, 3)
+
+    def test_low_marker_not_replaced(self):
+        new, by, total, _ = S.scrub_text('无意境的 sk-deadbeef', level='high')
+        self.assertIn('sk-deadbeef', new)
+        self.assertEqual(by['low'], 1)
+        self.assertEqual(total, 1)
+
+    def test_task_word_not_treated_as_secret(self):
+        for text in ('task-deadbeef.json', 'hard-disk-4f2a', 'ask-at-poorest'):
+            self.assertEqual(S.secrets.classify(text), [], text)
+
+    def test_allowlist_skips_by_hash(self):
+        h = S.secrets.hash8(SECRET)
+        new, by, total, skipped = S.scrub_text(f'a {SECRET}', allow={h})
+        self.assertIn(SECRET, new)
+        self.assertEqual(skipped, 1)
+        self.assertEqual(by['high'], 1)
 
     def test_dry_run_writes_nothing(self):
         p = self.write('a.jsonl', json.dumps({'t': SECRET}) + '\n')
@@ -140,6 +168,29 @@ class ScrubTest(Base):
         self.run_main('--apply')
         m = json.loads(next((self.root / 'alerts').glob('s0-scrub-*.json')).read_text())
         self.assertEqual(m['rows'][0]['layer'], 'S1-raw')
+
+
+class RotateTest(Base):
+    def test_rotate_list_groups_services(self):
+        self.write('a.jsonl', json.dumps({'k': SECRET}) + '\n')
+        self.write('b.jsonl', json.dumps({'k': 'ghp_' + 'c' * 40}) + '\n')
+        self.write('c.jsonl', json.dumps({'k': 'hf_' + 'd' * 40}) + '\n')
+        self.write('d.jsonl', 'task-deadbeef\n')
+        code, out = self.run_main('--rotate-list')
+        self.assertEqual(code, 0)
+        self.assertIn('GitHub PAT', out)
+        self.assertIn('HuggingFace', out)
+        self.assertIn('sk-*', out)
+        self.assertNotIn('task-deadbeef', out)
+        self.assertFalse((self.root / 'alerts').exists())
+
+    def test_level_medium_apply_writes_manifest_fields(self):
+        self.write('a.jsonl', json.dumps({'k': SECRET, 'b': BEARER}) + '\n')
+        code, out = self.run_main('--apply', '--level', 'medium')
+        self.assertIn('high 1 / medium 1', out)
+        m = json.loads(next((self.root / 'alerts').glob('s0-scrub-*.json')).read_text())
+        self.assertEqual(m['level'], 'medium')
+        self.assertEqual(m['by_confidence'], {'high': 1, 'medium': 1, 'low': 0})
 
 
 if __name__ == '__main__':

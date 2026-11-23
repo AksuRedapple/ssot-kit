@@ -24,8 +24,18 @@ cd "$KIT" && git pull && bash scripts/update.sh
 1. 看 `CHANGELOG.md`（本仓库）了解这轮变化；版本号见 `VERSION`
 2. 若变更涉及协议（CHANGELOG 会标注），开机块/技能已在 update 中同步，无需手工操作
 3. 建议升级后跑一次自查：`python3 ~/ssot/tools/ssot_check.py`
-4. **可选自动化**：`update.sh` 同步 `tools/hooks/`、`tools/steward.sh`、`tools/session-gate.sh`，但**不会**自动改 settings 或定时器；需要时显式跑
-   `bash scripts/install-hooks.sh` / `bash scripts/install-steward.sh`（先 `--dry`；卸载加 `--uninstall`）。详见 `docs/HOOKS.md`。
+4. **更新会同步什么（以 `update.sh` 为准）**：
+
+   | 类别 | 是否由 update.sh 自动同步 | 说明 |
+   |---|---|---|
+   | `tools/*.py` | ✅ | 含共享层 `tools/ssotlib/**`（递归，含 `index/` 子包） |
+   | `tools/hooks/*.sh` | ✅ | 钩子脚本本体 |
+   | `tools/serve_embed.sh` | ✅ | 嵌入服务启动脚本 |
+   | `tools/steward.sh` | ❌ | 由 `bash scripts/install-steward.sh` 显式安装/更新（会写 launchd/systemd） |
+   | `tools/session-gate.sh` | ❌ | 本仓库不提供该文件；文档中的门禁示例以实例实际安装为准 |
+   | settings / 定时器 / 系统配置 | ❌ | 永不自动改；需显式跑安装脚本并确认 |
+
+   需要钩子/值守时显式跑 `bash scripts/install-hooks.sh` / `bash scripts/install-steward.sh`（先 `--dry`；卸载加 `--uninstall`）。详见 `docs/HOOKS.md`。
 
 ## 反馈问题与提案
 

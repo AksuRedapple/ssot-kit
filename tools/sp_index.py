@@ -40,6 +40,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ssotlib import policy as sp_policy  # noqa: E402
+from ssotlib import secrets as sp_secrets  # noqa: E402
 from ssotlib import fingerprint as sp_fingerprint  # noqa: E402
 from ssotlib import asserts as sp_assert_lib  # noqa: E402
 from ssotlib import cli, store  # noqa: E402
@@ -132,9 +133,8 @@ for _a in sys.argv:
 
 GREET_RX = re.compile(
     r'^(你好|您好|hi|hello|在吗|在么|早上好|晚安|谢谢|多谢|好的|嗯+|ok)[!！。.~？?\s]*$', re.I)
-SECRET_RX = re.compile(
-    r'(sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|'
-    r'hf_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)')
+# 密钥闸统一走 ssotlib.secrets（2026-11-23 P2：旧正则无边界的 sk- 会把
+# task-/ask- 词尾当密钥，实测把 10 个正常 S1 源挡在索引外）
 
 # v5（2026-10-15）：①tool_use 选择性入索引（动作/语义类工具，滤 Read/Grep/任务板噪音）
 #                 ②子 agent 派生层 S1-subagents 入索引（A 档 md + B 档 jsonl）
@@ -955,7 +955,9 @@ def main():
         return
     if '--allow-secret-files' not in sys.argv:
         hits = [path for path, rows in blocks.items()
-                if any(SECRET_RX.search((r[1] if len(r) > 1 else '') or '') for r in rows)]
+                if any(f['confidence'] == 'high'
+                       for f in sp_secrets.classify(
+                           '\n'.join((r[1] if len(r) > 1 else '') or '' for r in rows)))]
         if hits:
             print(f'❌ 隐私闸：{len(hits)} 源含密钥形态，拒绝索引（先脱敏，或 --allow-secret-files）', flush=True)
             for p in hits[:20]:

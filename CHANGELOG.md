@@ -6,6 +6,24 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.30.9] - 2026-11-23 — 第五批反馈：同步 P0 + 扫描分级 + 检索/采集缺口
+
+- **fix(P0/安装)**: `setup.sh`/`update.sh` 改用 `cp -R` 递归同步 `tools/ssotlib/`（含 v0.30 的 `index/` 子包）。此前只拷 `*.py`，全新安装与升级都会缺子包 → `sp_semantic` ImportError
+- **feat(install-drift)**: `ssot_check` 新增 `[install-drift]`：对比 kit 的 `ssotlib` 树，缺文件阻断；steward.sh 内容差异只警告（本地定制合法）
+- **test(preflight)**: 新增「删掉子包 → update → 必须恢复 + 可 import」的升级冒烟
+- **fix(P1/文档)**: `UPGRADE.md` 改为与实际一致的同步清单表；明确 `steward.sh` 由 install-steward.sh 管理、`session-gate.sh` 不由本仓提供
+- **feat(P2/扫描)**: 新增 `ssotlib/secrets.py` 分级（high/medium/low）：
+  - `sk-` 加词边界，`task-<hex>` / `ask-at-poorest` / `hard-disk-*` 不再误报
+  - 短 `sk-<hex>` 仅在 `api_key|token|secret|authorization` 上下文升 medium；无上下文为 low
+  - `sp_s0scan --unique` 按 sha256 聚合（脱敏前缀/次数/文件数/harness/置信度）
+  - `sp_s0scrub --level high|medium|all`（默认 high）、`--allowlist`（sha256）、`--rotate-list`
+  - `sp_index` 隐私闸改用分级 high，修掉 10 个正常 S1 源被误挡
+  - 实例 steward 镜像后自动 `sp_s0scrub --scope s0 --level medium`（rsync 会带回密钥）
+  - 新增 `sp_s0repair`：修复 2026-11-22 旧 scrub 的「词尾」误伤（精确找回 + `sk-REDACTED` 退化）
+- **feat(P3/检索)**: `sp_recall` 默认分词 AND（顺序不限），`--phrase` 整串、`--regex` 正则；输出标注模式
+- **feat(P4/采集)**: `sp_drafts --backfill`：反扫 S1，列出有内容但无草稿的会话（只读）
+- **test**: kit 测试 24 个（新增 secrets/scan/repair/recall/drafts/install-drift）
+
 ## [0.30.8] - 2026-11-22 — 新增 sp_s0scrub（证据层就地脱敏）
 
 - **feat(sp_s0scrub)**: `sp_s0scan` 只能报命中，不能消除。新工具按 `ssotlib.ingest.SECRET_RX` 就地替换为 `[REDACTED-SECRET]`：默认 dry-run、`--apply` 才落盘；范围默认**整个 evidence/**（S0 + S1 raw.jsonl 副本 + transcript）；保留 mtime（避免增量全量重转）；JSONL 逐行校验后才写；每次写清单（只有路径/计数/前后 sha256）

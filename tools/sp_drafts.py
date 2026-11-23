@@ -18,6 +18,7 @@ import os
 import re
 import sys
 from ssotlib import cli  # noqa: E402
+from ssotlib import policy as sp_policy  # noqa: E402
 
 SSOT = os.path.expanduser(os.environ.get('SSOT_ROOT', '~/ssot'))
 PENDING = os.path.join(SSOT, 'sessions', '_pending')
@@ -125,12 +126,59 @@ def cmd_candidate(sid8):
     return 0
 
 
+def cmd_backfill(as_json=False, limit=50):
+    """从 S1 反扫「有内容但无草稿」的会话（只读；仍人工转正）。"""
+    drafts = set()
+    for p in glob.glob(os.path.join(PENDING, '*.md')):
+        drafts.add(os.path.basename(p)[:8])
+    retired, _ = sp_policy.load_retired(SSOT)
+    rows = []
+    for mp in sorted(glob.glob(os.path.join(SSOT, 'evidence', '*', 'S1-sessions', '*', 'meta.json'))):
+        s1 = os.path.dirname(mp)
+        sid8 = os.path.basename(s1).split('-')[3][:8] if len(os.path.basename(s1).split('-')) > 3 else ''
+        if not sid8 or sid8 in drafts:
+            continue
+        meta = read_meta(s1)
+        sid = str(meta.get('sid') or '')
+        if sid and sid in retired:
+            continue
+        counts = meta.get('counts') or {}
+        n = sum(int(counts.get(k) or 0) for k in ('user', 'assistant'))
+        if n == 0:
+            # 没 counts 的旧 meta：按 transcript 行数兜底
+            try:
+                n = sum(1 for _ in open(os.path.join(s1, 'transcript.jsonl'), encoding='utf-8',
+                                        errors='replace'))
+            except OSError:
+                n = 0
+        if n == 0 or meta.get('smoke'):
+            continue
+        rows.append({'sid8': sid8, 'sid': sid, 'dir': os.path.relpath(s1, SSOT),
+                     'title': one_line(meta.get('title') or '-')[:60],
+                     'cwd': one_line(meta.get('cwd') or '-')[:60],
+                     'lines': n})
+        if len(rows) >= limit:
+            break
+    if as_json:
+        print(json.dumps({'backfill': len(rows), 'rows': rows}, ensure_ascii=False, indent=1))
+        return 0
+    print(f"有内容但无草稿的会话 {len(rows)} 个（只读候选；确认后手工建草稿/转正）")
+    for r in rows:
+        print(f"{r['sid8']}  {r['lines']:>5} 行  {r['cwd']}  {r['title']}")
+    return 0
+
+
 def main():
     ap = cli.base_parser(epilog='示例:\n  sp_drafts.py --list\n  sp_drafts.py --candidate 1a2b3c4d', root=False)
     ap.add_argument('--list', action='store_true')
     ap.add_argument('--candidate', metavar='SID8')
     ap.add_argument('--json', action='store_true')
+    ap.add_argument('--backfill', action='store_true',
+                    help='反扫 S1：列出有内容但无草稿的会话（只读）')
+    ap.add_argument('--limit', type=int, default=50)
     a = ap.parse_args()
+    if a.backfill:
+        return cmd_backfill(a.json, a.limit)
     if a.candidate:
         return cmd_candidate(a.candidate)
     if a.list:

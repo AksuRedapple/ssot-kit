@@ -40,7 +40,7 @@ for f in "$KIT"/tools/*.py; do
 done
 # 共享层 ssotlib/（tools/ 就是运行目录，工具 import 它不需要注入路径）
 if [ -d "$KIT/tools/ssotlib" ]; then
-  [ "$DRY" = 1 ] || { mkdir -p "$ROOT/tools/ssotlib"; cp -f "$KIT"/tools/ssotlib/*.py "$ROOT/tools/ssotlib/"; }
+  [ "$DRY" = 1 ] || { mkdir -p "$ROOT/tools/ssotlib"; cp -R "$KIT/tools/ssotlib/." "$ROOT/tools/ssotlib/"; }
 fi
 for f in "$KIT"/hooks/*.sh; do
   [ -e "$f" ] || continue

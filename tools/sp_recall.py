@@ -52,6 +52,52 @@ def snippet(text, m, ctx):
 SID_DIR = re.compile(r'^\d{4}-\d{2}-\d{2}-([0-9a-f]{8})')
 
 
+class _Hit:
+    def __init__(self, start, end):
+        self._s, self._e = start, end
+
+    def start(self):
+        return self._s
+
+    def end(self):
+        return self._e
+
+    def group(self, *a):
+        return ''
+
+
+class AndMatcher:
+    """默认模式：所有词都出现（顺序不限），返回最早出现位置做 snippet 锚点。"""
+
+    def __init__(self, pattern, ignore_case=False):
+        self.ignore_case = ignore_case
+        self.tokens = [t for t in pattern.split() if t]
+        self.raw = pattern
+        if not self.tokens:
+            raise ValueError('empty pattern')
+        self._tokens = [t.lower() if ignore_case else t for t in self.tokens]
+
+    def search(self, text):
+        low = text.lower() if self.ignore_case else text
+        best = None
+        for t in self._tokens:
+            i = low.find(t)
+            if i < 0:
+                return None
+            if best is None or i < best[0]:
+                best = (i, len(t))
+        return _Hit(best[0], best[0] + best[1])
+
+
+def make_matcher(pattern, mode='and', ignore_case=False):
+    flags = re.I if ignore_case else 0
+    if mode == 'regex':
+        return re.compile(pattern, flags), 'regex'
+    if mode == 'phrase':
+        return re.compile(re.escape(pattern), flags), 'phrase'
+    return AndMatcher(pattern, ignore_case), 'and'
+
+
 def sid_of(path):
     base = os.path.basename(path)
     if base == 'transcript.jsonl':
@@ -213,6 +259,12 @@ def main():
     ap.add_argument('--live', action='store_true', help='追加 harness 真源（jsonl）')
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--ignore-case', action='store_true')
+    ap.add_argument('--mode', choices=['and', 'phrase', 'regex'], default='and',
+                    help='and=分词全部命中（默认，顺序不限）；phrase=整串连续；regex=正则')
+    ap.add_argument('--phrase', dest='mode', action='store_const', const='phrase',
+                    help='等价 --mode phrase')
+    ap.add_argument('--regex', dest='mode', action='store_const', const='regex',
+                    help='等价 --mode regex')
     a = ap.parse_args()
 
     only = set(ROLES) if a.harness == 'all' else set(x.strip() for x in a.harness.split(',') if x.strip())
@@ -221,9 +273,9 @@ def main():
         print(f"未知 harness: {','.join(sorted(bad))}", file=sys.stderr)
         return 2
     try:
-        rx = re.compile(a.pattern, re.I if a.ignore_case else 0)
-    except re.error as e:
-        print(f"正则错误: {e}", file=sys.stderr)
+        rx, mode = make_matcher(a.pattern, a.mode, a.ignore_case)
+    except (re.error, ValueError) as e:
+        print(f"模式错误: {e}", file=sys.stderr)
         return 2
     since = sp_sources.parse_since(a.since)
     hits, seen = [], set()
@@ -237,13 +289,15 @@ def main():
     hits = hits[:a.limit]
     for r in hits:
         r['snippet'] = _scrub(r['snippet'])
-    out = {'query': a.pattern, 'count': len(hits), 'ms': int((time.time() - t0) * 1000),
+    out = {'query': a.pattern, 'mode': mode, 'count': len(hits),
+           'ms': int((time.time() - t0) * 1000),
            'layers': ['S1'] + (['S0'] if a.raw else []) + (['live'] if a.live else []),
            'hits': hits}
     if a.json:
         print(json.dumps(out, ensure_ascii=False, indent=1))
     else:
-        print(f"query: {a.pattern} · 命中 {len(hits)} · {out['ms']}ms · 层 {','.join(out['layers'])}")
+        print(f"query: {a.pattern} · 模式 {mode} · 命中 {len(hits)} · {out['ms']}ms"
+              f" · 层 {','.join(out['layers'])}")
         for r in hits:
             print(f"\n[{r['layer']}] {r['harness']}/{r['sid']} · {r['role']} · {r['ts']}")
             print(f"  {os.path.relpath(r['file'], SSOT)}:{r['line']}")

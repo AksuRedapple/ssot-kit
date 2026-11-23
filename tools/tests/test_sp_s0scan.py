@@ -1,59 +1,94 @@
 #!/usr/bin/env python3
-"""回归：S0 巡检只报计数/路径，不输出密钥内容。"""
+"""回归：sp_s0scan 的分级与 --unique（P2）。
+
+判据：high/medium/low 分开计数；low 的 task-/ask- 词尾不再被当密钥；
+--unique 按值 sha256 聚合（不打印明文）。
+"""
+import io
 import json
 import os
-import subprocess
 import sys
 import tempfile
+import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-TOOL = ROOT / "tools" / "sp_s0scan.py"
-SECRET = "sk-" + "a" * 32
+TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, TOOLS)
+
+import sp_s0scan as S  # noqa: E402
+
+KEY = 'sk-' + 'a' * 30
 
 
-def main():
-    fails = []
-    with tempfile.TemporaryDirectory() as td:
-        t = Path(td)
-        s0 = t / "evidence/qoder/S0-archive/proj"
-        s0.mkdir(parents=True)
-        (s0 / "a.jsonl").write_text('{"x":"%s"}\n' % SECRET, encoding="utf-8")
-        (s0 / "b.jsonl").write_text('{"x":"clean"}\n', encoding="utf-8")
-        pi = t / "evidence/pi/S0-archive/proj"
-        pi.mkdir(parents=True)
-        (pi / "c.jsonl").write_text('{"x":"%s"}\n' % SECRET, encoding="utf-8")
-        env = dict(os.environ, SSOT_ROOT=str(t))
-        r = subprocess.run([sys.executable, str(TOOL), "--json", "--write-state"],
-                           capture_output=True, text=True, env=env)
-        if r.returncode != 0:
-            fails.append(f"rc={r.returncode}: {r.stderr}")
-        else:
-            d = json.loads(r.stdout)
-            if d["files_hit"] != 2 or d["matches"] < 2:
-                fails.append(f"计数不对: {d}")
-            if SECRET in r.stdout or "sk-aaa" in r.stdout:
-                fails.append("输出了密钥内容")
-        r = subprocess.run([sys.executable, str(TOOL), "--json", "--only", "pi"],
-                           capture_output=True, text=True, env=env)
-        d = json.loads(r.stdout)
-        if d["scanned"] != 1 or d["files_hit"] != 1:
-            fails.append(f"--only pi 不对: {d}")
-        st = t / "alerts/s0-scan.json"
-        if not st.exists() or json.loads(st.read_text())["files_hit"] != 2:
-            fails.append("state 未写/不对")
+class Base(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.root = Path(self._td.name)
+        self.old = (S.SSOT, S.STATE, sys.argv)
+        S.SSOT = str(self.root)
+        S.STATE = str(self.root / 'alerts/s0-scan.json')
+        self.s0 = self.root / 'evidence/cc/S0-archive/claude-projects/p'
+        self.s0.mkdir(parents=True)
 
-    if fails:
-        for f in fails:
-            print("  FAIL", f)
-        print("有失败")
-        return 1
-    print("  ok   S0 命中计数")
-    print("  ok   不输出密钥内容")
-    print("  ok   state 写入")
-    print("全部通过")
-    return 0
+    def tearDown(self):
+        S.SSOT, S.STATE, sys.argv = self.old
+        self._td.cleanup()
+
+    def write(self, name, text):
+        (self.s0 / name).write_text(text, encoding='utf-8')
+
+    def run_main(self, *argv):
+        sys.argv = ['sp_s0scan.py', *argv]
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = S.main() or 0
+        return code, buf.getvalue()
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+class ScanTest(Base):
+    def test_confidence_split_and_low_ignored(self):
+        self.write('a.jsonl', '{"k": "%s"}\n' % KEY)
+        self.write('b.jsonl', 'api_key: sk-deadbeef\n')
+        self.write('c.jsonl', 'task-deadbeef ask-at-poorest hard-disk-4f2a\n')
+        self.write('d.jsonl', 'Authorization: Bearer ' + 'b' * 40 + '\n')
+        d = S.scan()
+        self.assertEqual(d['files_hit'], 3)      # c 无命中
+        self.assertEqual(d['by_confidence']['high'], 1)
+        self.assertEqual(d['by_confidence']['medium'], 2)
+        self.assertEqual(d['by_confidence']['low'], 0)
+        self.assertEqual(d['high_files'], 1)
+
+    def test_unique_aggregation(self):
+        self.write('a.jsonl', '{"k": "%s"}\n{"k": "%s"}\n' % (KEY, KEY))
+        self.write('b.jsonl', '{"k": "%s"}\n' % KEY)
+        d = S.scan(unique=True)
+        self.assertEqual(d['unique_count'], 1)
+        rec = d['unique'][0]
+        self.assertEqual(rec['count'], 3)
+        self.assertEqual(rec['files'], 2)
+        self.assertEqual(rec['confidence'], 'high')
+        self.assertEqual(len(rec['hash']), 8)
+        self.assertNotIn(KEY, json.dumps(d, ensure_ascii=False))
+
+    def test_main_json_unique_and_state(self):
+        self.write('a.jsonl', '{"k": "%s"}\n' % KEY)
+        code, out = self.run_main('--json', '--unique', '--write-state')
+        self.assertEqual(code, 0)
+        d = json.loads(out)
+        self.assertEqual(d['unique_count'], 1)
+        self.assertTrue(Path(S.STATE).exists())
+        st = json.loads(Path(S.STATE).read_text(encoding='utf-8'))
+        self.assertEqual(st['by_confidence']['high'], 1)
+
+    def test_only_filter_and_table_output(self):
+        self.write('a.jsonl', KEY)
+        code, out = self.run_main('--unique')
+        self.assertIn('high 1', out)
+        self.assertIn('唯一值 1', out)
+        code, out = self.run_main('--only', 'qoder')
+        self.assertIn('0/0', out)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
