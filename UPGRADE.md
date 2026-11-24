@@ -24,6 +24,8 @@ cd "$KIT" && git pull && bash scripts/update.sh
 1. 看 `CHANGELOG.md`（本仓库）了解这轮变化；版本号见 `VERSION`
 2. 若变更涉及协议（CHANGELOG 会标注），开机块/技能已在 update 中同步，无需手工操作
 3. 建议升级后跑一次自查：`python3 ~/ssot/tools/ssot_check.py`
+4. 再跑一次冷启动自检（kit 目录）：`bash scripts/coldstart-check.sh`
+   —— 检查解释器 numpy / boot-START 是否仍引用 legacy / active 索引 / MEMORY 预算；四项说明见 [docs/COLDSTART.md](docs/COLDSTART.md)
 4. **更新会同步什么（以 `update.sh` 为准）**：
 
    | 类别 | 是否由 update.sh 自动同步 | 说明 |

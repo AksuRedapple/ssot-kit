@@ -23,10 +23,21 @@ description: SSOT 记忆中枢操作路由（读档/归位/提纯/检索）｜�
 | 文章成篇 / 审稿发布 | `essay` / `site-writing-guide` |
 | 面试演练 | `gauntlet-drill` |
 
+## 0 开工自检（冷启动，60 秒）
+
+旧实例最容易坏在「体检绿、冷启动坏」：boot 还指向 legacy、python3 不带 numpy、S2 索引不是 active。先跑（kit 目录）：
+
+```bash
+bash scripts/coldstart-check.sh
+```
+
+五查：解释器 numpy / boot-START 引用存在且非 `tools/legacy/` / S2 active 索引 / `MEMORY.md` <24KB / 线页无过期与「已结/搁置」状态词。
+任一 FAIL 先修，**不要用停更的 legacy 库回答“最近”**。详见系统件仓库 `docs/COLDSTART.md`。
+
 ## 四步
 
 1. **读**：`START.md` → `lines/<线>.md` → 项目 `.memory/` → 需要出处再 `evidence/`
-2. **搜**：`python3 tools/sp_semantic.py "<问题>" --expand --top 5`
+2. **搜**：`"${SSOT_PY:-python3}" tools/sp_semantic.py "<问题>" --expand --top 5`（解释器契约见 COLDSTART §3）
 3. **写**：追加 `inbox/YYYY-MM-DD.md`，一行一条
 4. **提纯**：`python3 tools/sp_purify.py`（默认 dry-run，`--apply` 才写，先自动备份）
 
@@ -46,6 +57,7 @@ description: SSOT 记忆中枢操作路由（读档/归位/提纯/检索）｜�
 3. 单向提纯，永不反向；inbox 原文不删
 4. `evidence/` 只读；原文不可变
 5. source 不编造；不确定标「未知」
+6. boot/START 不得引用 `tools/legacy/`；升级后先跑 `coldstart-check.sh`，不要假设 `python3` 带 numpy
 
 ## 提纯口径（2026-11-20）
 

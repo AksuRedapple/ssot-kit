@@ -3,6 +3,7 @@
 > 主系统（台账 + 知识库）不依赖本层——grep 与台账已可用。装上本层后，可以「按意思搜」全部知识。
 
 > 说明：`BUILD.json` 的 `commit` 为 `-` 表示实例不是 git 仓（正常形态），不是错误。
+> 先做解释器自检：`python3 -c 'import sys,numpy;print(sys.version.split()[0],numpy.__version__)'`；失败时设 `SSOT_PY` 指向带 numpy 的 python（见 [COLDSTART.md](COLDSTART.md) §3）。
 
 ## 组成
 

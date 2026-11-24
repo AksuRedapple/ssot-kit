@@ -25,6 +25,7 @@ description: SSOT 工具统一手册（何时用/命令/判据/坑）｜触发: 
 | 断言体检 | `tools/sp_assert_audit.py` | 状态/重复/断号/断链/环/引用 |
 | 断言编号 | `tools/sp_assert_alloc.py` | A 编号分配（不手写） |
 | 健康检查 | `tools/ssot_check.py` | 六检查一屏 |
+| 冷启动自检 | `scripts/coldstart-check.sh` | 解释器/boot/索引/预算 五查（kit 目录） |
 | 安全提纯 | `tools/sp_purify.py` | 默认 dry-run，只追加，自动备份 |
 | 索引合并 | `tools/sp_index_merge.py` | 分片库 → 等价库 + `--verify` |
 | 索引版本 | `tools/sp_pending.py` / `sp_index.py --status` | 版本目录 + 原子指针 |
@@ -46,6 +47,9 @@ python3 tools/sp_index.py --incremental
 
 # 健康检查
 python3 tools/ssot_check.py
+
+# 冷启动/升级后五查（kit 目录；--strict 把警告也判失败）
+bash scripts/coldstart-check.sh
 
 # 安全提纯
 python3 tools/sp_purify.py            # dry-run
@@ -72,6 +76,9 @@ python3 tools/sp_purify.py --apply    # 备份后写盘
 - 提纯脚本**只追加、不重写**；改前 `git status`，dirty 先备份
 - 批量改写前先 dry-run，看计划再 `--apply`
 - 会话转换跨平台时注意 UTF-8（Windows 默认 cp936）
+- **`python3` 不一定带 numpy**：语义检索/索引/编译必须用同一个解释器；失败时设 `SSOT_PY`
+- **boot/START 可能仍指向 legacy**：升级不动内容层；用 `coldstart-check.sh` 查 `tools/legacy/` 引用
+- **体检绿 ≠ 冷启动可用**：`ssot_check` 只看 S2；若 boot 指向 `kb-index`，会「体检健康、搜到旧库」
 
 ## 5 新增工具的最低文档要求
 

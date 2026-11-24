@@ -17,7 +17,7 @@
 ## 常用命令
 
 - 开工：走「开工三问」（技能 `ssmap` 或系统件仓库 `docs/SSMAP.md`，位置见 `profile/.kit-path`）
-- 搜：`python3 ~/ssot/tools/kb_search.py "…"`（需嵌入服务，见系统件仓库 `docs/SEMANTIC.md`）
+- 搜：`python3 ~/ssot/tools/sp_semantic.py "…" --expand --top 5`（需嵌入服务，见系统件仓库 `docs/SEMANTIC.md`）
 - 薄壳：`python3 ~/ssot/tools/sp_compile.py --mem`（生成候选；`--deploy` 切换下发）
 - 自查：`python3 ~/ssot/tools/ssot_check.py`
 

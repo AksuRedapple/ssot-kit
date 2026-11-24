@@ -2,6 +2,7 @@
 
 > 两种路径：**A 升级已有实例**（最常用）｜**B 从零安装**。
 > 前置：`python3` ≥ 3.10、`numpy`、`git`。语义检索另需嵌入模型（约 800 MB）与常驻服务，见路径 B 第 4 步。
+> **装完/升级后先跑**：`bash scripts/coldstart-check.sh`（四条断链：解释器 / boot 引用 / 索引 / 预算，见 [COLDSTART.md](COLDSTART.md)）。
 
 ## 路径 A：升级已有实例（推荐）
 
@@ -33,9 +34,9 @@ git clone <本仓库> ssot-kit && cd ssot-kit
 # 1) 建实例骨架（只补缺，不覆盖已有文件）
 bash tools/install/setup.sh --root ~/ssot
 
-# 2) 把框架件放进实例
-cp tools/*.py ~/ssot/tools/
-mkdir -p ~/ssot/tools/hooks && cp hooks/*.sh ~/ssot/tools/hooks/
+# 2) 框架件已由 setup.sh 递归同步（含 tools/ssotlib/**）
+#    ⚠️ 不要再手工 `cp tools/*.py`——会漏掉 ssotlib/index/ 等子包，
+#    升级后 sp_semantic 会 ModuleNotFoundError。缺文件就重跑 setup/update.sh。
 
 # 3) 体检（此时语义层还没建，相关行会显示 0/缺省，属正常）
 python3 ~/ssot/tools/ssot_check.py
@@ -112,4 +113,6 @@ python3 ~/ssot/tools/sp_semantic.py \
 |---|---|---|
 | `sp_semantic` 报连不上/很慢 | 常驻服务没起 | 起服务（见 `docs/SEMANTIC.md`），或加 `--oneshot` 临时直跑 |
 | `ssot_check` 报缺文件 | 框架层没同步 | 重跑 `bash tools/install/update.sh --root ~/ssot` |
-| 文档里提到 `kb_index.py` | 该脚本已归档 | 用 `sp_index.py` / `sp_semantic.py` 替代（文档清理中） |
+| 文档里提到 `kb_search.py` / `kb_index.py` | 这些是旧工具 | 用 `sp_semantic.py` / `sp_index.py`；旧实例的 boot/START 需要手工或迁移脚本更新 |
+| `sp_semantic` 报 `No module named 'ssotlib.index'` | 升级只拷了顶层 `ssotlib/*.py` | 重跑 `bash tools/install/update.sh --root ~/ssot`（已改为递归） |
+| `sp_semantic` 报 numpy 缺失 | `python3` 不是带 numpy 的解释器 | `python3 -c 'import numpy'`；不行设 `SSOT_PY`，见 [COLDSTART.md](COLDSTART.md) §3 |

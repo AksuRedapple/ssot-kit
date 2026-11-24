@@ -117,6 +117,7 @@ Public issues and pull requests are welcome; security reports should follow [SEC
 - [Architecture](docs/ARCHITECTURE.en.md)
 - [Protocols](docs/PROTOCOLS.md)
 - [Quick start](docs/QUICKSTART.md)
+- [Cold start & upgrade self-check](docs/COLDSTART.md)
 - [Capabilities](CAPABILITIES.md)
 - [Release history](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)

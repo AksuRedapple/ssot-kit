@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.0] - 2026-11-24 — 冷启动操作手册与自检脚本
+
+- **docs**: 新增 `docs/COLDSTART.md`：四条断链（指令/工具、双索引、解释器、预算）+ 60 秒自检 + 升级后顺序 + 故障表；README / QUICKSTART / UPGRADE / SEMANTIC 已互链
+- **feat(scripts)**: 新增 `scripts/coldstart-check.sh`（只读、五查）：解释器 numpy / boot-START 引用非 legacy / S2 active 索引 / MEMORY 预算 / 线页过期与状态词；`--strict` 把警告判失败
+- **fix(instance/START.md)**: 模板里的 `tools/kb_search.py` 改为 `tools/sp_semantic.py`；旧实例内容层不会被 update 覆盖，需要手工或迁移脚本更新
+- **docs(QUICKSTART)**: 删除“手工 `cp tools/*.py`”步骤（会漏 `ssotlib/index/` 子包），改为由 `setup.sh` 递归同步；故障表补 numpy/子包两条
+- **skills**: `ssot-ops` 增加「0 开工自检」与解释器/legacy 红线；`ssot-toolbox` 增加冷启动自检入口与两条坑
+
 ## [0.30.11] - 2026-11-23 — ssot_check 报告变量遮蔽修复
 
 - **fix(ssot_check)**: `[install-drift]` 里 `stale` 列表覆盖了主流程的「过期线页」`stale`，`--report` 生成时 `", ".join()` 收到 tuple → `TypeError`（steward 每轮 report 都失败）。变量改名 `stale_items`；新增带过期线页的 `--report` 回归
