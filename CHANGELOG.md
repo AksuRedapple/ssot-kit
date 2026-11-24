@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.1] - 2026-11-24 — 维护流程分级（docs-only 不再跑全量）
+
+- **docs**: 新增 `docs/MAINTENANCE.md`：A 文档 / B 工具 / C 发版 / D 实例内容四级，明确每级必跑/不必跑的闸、批量顺序、CI 异步与停止规则
+- **docs(CONTRIBUTING)**: 「Run the full local gate」改为按变更级别选闸；docs-only 只跑 release-check/public-audit/shell_strict，发布前 preflight 一次
+- **README**: 文档索引补 MAINTENANCE
+
 ## [0.31.0] - 2026-11-24 — 冷启动操作手册与自检脚本
 
 - **docs**: 新增 `docs/COLDSTART.md`：四条断链（指令/工具、双索引、解释器、预算）+ 60 秒自检 + 升级后顺序 + 故障表；README / QUICKSTART / UPGRADE / SEMANTIC 已互链

@@ -118,6 +118,7 @@ Public issues and pull requests are welcome; security reports should follow [SEC
 - [Protocols](docs/PROTOCOLS.md)
 - [Quick start](docs/QUICKSTART.md)
 - [Cold start & upgrade self-check](docs/COLDSTART.md)
+- [Maintenance: change classes & gates](docs/MAINTENANCE.md)
 - [Capabilities](CAPABILITIES.md)
 - [Release history](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
