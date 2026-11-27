@@ -1,4 +1,4 @@
-# kit 能力清单（v0.31.12 · 2026-11-28）
+# kit 能力清单（v0.31.13 · 2026-11-28）
 
 > 本仓库是可直接安装、升级和测试的参考实现。发布门禁见 `scripts/release-check.sh`、`scripts/preflight.sh` 与 `scripts/public-audit.sh`。
 > 分层：**核心四件**（日常必用）→ **自动化**（后台/批量）→ **LLM 管道**（实验性，需模型额度）。

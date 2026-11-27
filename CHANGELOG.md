@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.13] - 2026-11-28 — cold acquire 夹具确定性化
+
+- **fix(test)**: cold acquire 用例改用依赖注入假解释器，首次 probe 必失败、lease 出现后转 ready；真实 socket 热路径由独立用例覆盖，消除 CI 嵌套子进程网络差异
+
 ## [0.31.12] - 2026-11-28 — acquire CI 诊断
+
+> 注意：v0.31.12 tag/main CI 仍因 Bash 子进程 cold connect 超时失败，请使用 v0.31.13；tag 未移动。
 
 - **diag(eg2)**: acquire 增加 `SSOT_EG2_ACQUIRE_DEBUG=1`，失败时输出 Python socket probe 的完整 stderr；默认行为不变
 

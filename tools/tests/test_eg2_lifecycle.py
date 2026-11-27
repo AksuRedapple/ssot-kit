@@ -112,25 +112,30 @@ exit 1
 
     def test_acquire_cold_and_hot(self):
         self.lease.unlink(missing_ok=True)
+        ready = self.root / 'eg2-ready'
+        first_probe = self.root / 'eg2-first-probe'
+        fake_python = self.root / 'fake-python'
+        fake_python.write_text(
+            f'#!/bin/bash\n'
+            f'if [[ "$*" == *socket* ]]; then\n'
+            f'  if [ ! -f "{first_probe}" ]; then touch "{first_probe}"; exit 1; fi\n'
+            f'  [ -f "{ready}" ] && exit 0 || exit 1\n'
+            f'fi\n'
+            f'exec "{sys.executable}" "$@"\n', encoding='utf-8')
+        fake_python.chmod(0o755)
         e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10', SECONDS='1000',
-                     SSOT_PYTHON=sys.executable, SSOT_EG2_ACQUIRE_DEBUG='1')
+                     SSOT_PYTHON=str(fake_python))
         acquire = subprocess.Popen(['/bin/bash', str(ACQUIRE)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, text=True, env=e)
         try:
-            # 确定性 cold 握手：等 acquire 先 touch lease，再让假服务开始监听。
+            # 确定性 cold 握手：等 acquire 先 touch lease，再模拟 health ready。
             for _ in range(100):
                 if self.lease.exists():
                     break
                 time.sleep(.02)
             else:
                 self.fail('acquire did not touch lease')
-            self.start_server()
-            probe = subprocess.run(
-                [sys.executable, '-c',
-                 "import socket,sys; s=socket.socket(); s.settimeout(1); "
-                 "s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()",
-                 str(self.port)], env=e, capture_output=True, text=True, timeout=5)
-            self.assertEqual(probe.returncode, 0, probe.stderr)
+            ready.touch()
             _out, err = acquire.communicate(timeout=20)
             self.assertEqual(acquire.returncode, 0, err)
         finally:
