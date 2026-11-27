@@ -6,8 +6,8 @@ LEASE="${SSOT_SEMANTIC_LEASE:-/tmp/ssot-semantic.want}"
 SOCKET_PATH="${SSOT_SEMANTIC_SOCKET:-$HOME/.ssot/semantic.sock}"
 TIMEOUT="${SSOT_SEMANTIC_ACQUIRE_TIMEOUT:-20}"
 LIFECYCLE_LOG="${SSOT_SEMANTIC_LIFECYCLE_LOG:-$SSOT_ROOT/logs/semantic-lifecycle.jsonl}"
-PYTHON="${SSOT_PYTHON:-/opt/homebrew/bin/python3}"
-[ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
+PYTHON="${SSOT_PYTHON:-$(command -v python3 2>/dev/null || true)}"
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
 [ "$(uname -s)" = "Darwin" ] || exit 0
 
 log_event() {

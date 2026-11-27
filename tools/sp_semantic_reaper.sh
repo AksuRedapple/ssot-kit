@@ -11,8 +11,8 @@ TERM_WAIT="${SSOT_SEMANTIC_TERM_WAIT_SEC:-15}"
 # 服务未运行时清理残留租约的年龄阈值，避免删掉 acquire 刚 touch、launchd 尚未拉起的租约。
 LEASE_STALE="${SSOT_SEMANTIC_LEASE_STALE_SEC:-120}"
 LIFECYCLE_LOG="${SSOT_SEMANTIC_LIFECYCLE_LOG:-$SSOT_ROOT/logs/semantic-lifecycle.jsonl}"
-PYTHON="${SSOT_PYTHON:-/opt/homebrew/bin/python3}"
-[ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
+PYTHON="${SSOT_PYTHON:-$(command -v python3 2>/dev/null || true)}"
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
 [ "$(uname -s)" = "Darwin" ] || exit 0
 UID_N="$(id -u)"
 

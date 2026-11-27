@@ -135,6 +135,22 @@ exit 1
         self.assertIn('acquire', text)
         self.assertIn('ready', text)
 
+    def test_acquire_uses_path_python_when_ssot_python_unset(self):
+        self.start_server()
+        bindir = self.root / 'pybin'
+        bindir.mkdir()
+        marker = self.root / 'python-used'
+        wrapper = bindir / 'python3'
+        wrapper.write_text(f'#!/bin/bash\necho used > "{marker}"\nexec "{sys.executable}" "$@"\n',
+                           encoding='utf-8')
+        wrapper.chmod(0o755)
+        e = self.env(PATH=f'{bindir}:/usr/bin:/bin', SSOT_PYTHON='',
+                     SSOT_EG2_ACQUIRE_TIMEOUT='3')
+        p = subprocess.run(['/bin/bash', str(ACQUIRE)], capture_output=True,
+                           text=True, env=e, timeout=10)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(marker.exists(), 'acquire did not use PATH python3')
+
     def test_reaper_reaps_idle(self):
         proc = self.start_server()
         self.old_lease()

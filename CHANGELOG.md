@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.8] - 2026-11-27 — 生命周期脚本解释器路由
+
+- **fix(lifecycle)**: semantic/eg2 acquire 与 reaper 统一按 `SSOT_PYTHON → PATH python3 → /usr/bin/python3` 解析解释器，不再硬编码 Homebrew 路径；补 PATH 解析回归
+
 ## [0.31.7] - 2026-11-27 — eg2 acquire 就绪探针加固
+
+> 注意：v0.31.7 tag/main CI 仍因脚本回退到 CI 不匹配的 Python 失败，请使用 v0.31.8；tag 未移动。
 
 - **fix(eg2)**: acquire 的就绪检查从 `curl /health` 改为 Python TCP socket，与 semantic 一致；去掉 CI curl/代理环境差异，保留 1s 超时与 60s 默认 acquire 窗口
 

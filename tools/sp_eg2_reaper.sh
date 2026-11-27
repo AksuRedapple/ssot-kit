@@ -11,8 +11,8 @@ TERM_WAIT="${SSOT_EG2_TERM_WAIT_SEC:-5}"
 # 的窗口；否则 reaper 可能在冷启动竞态里删掉刚 touch 的租约，导致 acquire 超时。
 LEASE_STALE="${SSOT_EG2_LEASE_STALE_SEC:-120}"
 LIFECYCLE_LOG="${SSOT_EG2_LIFECYCLE_LOG:-$SSOT_ROOT/logs/eg2-lifecycle.jsonl}"
-PYTHON="${SSOT_PYTHON:-/opt/homebrew/bin/python3}"
-[ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
+PYTHON="${SSOT_PYTHON:-$(command -v python3 2>/dev/null || true)}"
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
 [ "$(uname -s)" = "Darwin" ] || exit 0
 UID_N="$(id -u)"
 

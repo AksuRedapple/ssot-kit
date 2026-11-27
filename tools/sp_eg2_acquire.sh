@@ -6,8 +6,8 @@ PORT="${SSOT_EG2_PORT:-8399}"
 LEASE="${SSOT_EG2_LEASE:-/tmp/ssot-eg2.want}"
 TIMEOUT="${SSOT_EG2_ACQUIRE_TIMEOUT:-60}"
 LIFECYCLE_LOG="${SSOT_EG2_LIFECYCLE_LOG:-$SSOT_ROOT/logs/eg2-lifecycle.jsonl}"
-PYTHON="${SSOT_PYTHON:-/opt/homebrew/bin/python3}"
-[ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
+PYTHON="${SSOT_PYTHON:-$(command -v python3 2>/dev/null || true)}"
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || PYTHON=/usr/bin/python3
 [ "$(uname -s)" = "Darwin" ] || exit 0
 
 log_event() {
