@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows Keep
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.31.2] - 2026-11-27 — 语义生命周期与信任硬化
+
 - **feat(semantic)**: `sp_semantic` 首次查询自动唤醒 daemon，空闲 30 分钟回收；新增 `sp_semantic_daemon/acquire/reaper/observe/summary` 与 macOS `install-semantic.sh`，活跃连接不误杀，保留 oneshot 降级
 - **fix(semantic)**: acquire timeout 统一规范化为整数，避免 `20.0` 触发 Bash 整数比较错误导致首次冷查询降级；补小数环境值回归
 - **feat(eg2)**: 嵌入服务 `:8399` 支持租约懒启动 + 30 分钟空闲回收；`ssotlib.index.embed` 自动 acquire 并在断线后重试一次；hooks/opencode/pi 不再直接 spawn llama-server，新增 acquire/reaper 与生命周期测试；reaper 只清理超龄残留租约（避免冷启动竞态），服务在跑但租约消失时显式回收
