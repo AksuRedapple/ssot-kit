@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.3] - 2026-11-27 — CI 测试夹具修复
+
+- **fix(test)**: eg2 生命周期假服务改用 `python -S` 跳过 site 启动，就绪窗口 2s→5s，子进程早退时带出 stderr；修复 GitHub macOS Python 3.12 runner 上的启动竞态
+
 ## [0.31.2] - 2026-11-27 — 语义生命周期与信任硬化
+
+> 注意：v0.31.2 tag CI 因上述测试夹具失败，请使用 v0.31.3。
 
 - **feat(semantic)**: `sp_semantic` 首次查询自动唤醒 daemon，空闲 30 分钟回收；新增 `sp_semantic_daemon/acquire/reaper/observe/summary` 与 macOS `install-semantic.sh`，活跃连接不误杀，保留 oneshot 降级
 - **fix(semantic)**: acquire timeout 统一规范化为整数，避免 `20.0` 触发 Bash 整数比较错误导致首次冷查询降级；补小数环境值回归

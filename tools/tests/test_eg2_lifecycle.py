@@ -44,6 +44,8 @@ class Eg2LifecycleTest(unittest.TestCase):
         for p in self.servers:
             if p.poll() is None:
                 p.kill(); p.wait(2)
+            if p.stderr is not None:
+                p.stderr.close()
         self.tmp.cleanup()
 
     @staticmethod
@@ -52,15 +54,21 @@ class Eg2LifecycleTest(unittest.TestCase):
         return port
 
     def start_server(self, ignore_term=False):
-        p = subprocess.Popen([sys.executable, '-c', SERVER_CODE, str(self.port), str(self.pidfile),
-                              '1' if ignore_term else '0'])
+        # CI 的 Python 3.12 + site 启动在负载下可能超过 2s；-S 跳过 site，窗口放宽到 5s。
+        p = subprocess.Popen([sys.executable, '-S', '-c', SERVER_CODE, str(self.port), str(self.pidfile),
+                              '1' if ignore_term else '0'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         self.servers.append(p)
-        for _ in range(100):
+        for _ in range(250):
+            if p.poll() is not None:
+                self.fail(f'fake health server exited rc={p.returncode}: {p.stderr.read()}')
             try:
-                s = socket.create_connection(('127.0.0.1', self.port), timeout=.2); s.close(); return p
+                s = socket.create_connection(('127.0.0.1', self.port), timeout=.2)
+                s.close()
+                return p
             except OSError:
                 time.sleep(.02)
-        self.fail('fake health server not ready')
+        self.fail('fake health server not ready after 5s')
 
     def env(self, **extra):
         e = os.environ.copy()
