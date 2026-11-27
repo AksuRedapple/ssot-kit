@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.12] - 2026-11-28 — acquire CI 诊断
+
+- **diag(eg2)**: acquire 增加 `SSOT_EG2_ACQUIRE_DEBUG=1`，失败时输出 Python socket probe 的完整 stderr；默认行为不变
+
 ## [0.31.11] - 2026-11-28 — acquire 探针 stdin 解耦
+
+> 注意：v0.31.11 tag/main CI 仍因 cold acquire 失败，请使用 v0.31.12 获取诊断；tag 未移动。
 
 - **fix(lifecycle)**: semantic/eg2 acquire 的就绪探针从 heredoc 改为 `python -c`，与 CI 已验证的 socket probe 完全一致，消除 stdin/heredoc 环境差异
 

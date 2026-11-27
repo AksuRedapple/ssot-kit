@@ -23,7 +23,11 @@ PY
 }
 
 health() {
-  "$PYTHON" -c "import socket,sys; s=socket.socket(); s.settimeout(1); s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()" "$PORT" >/dev/null 2>&1
+  if [ "${SSOT_EG2_ACQUIRE_DEBUG:-0}" = "1" ]; then
+    "$PYTHON" -c "import socket,sys; s=socket.socket(); s.settimeout(1); s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()" "$PORT"
+  else
+    "$PYTHON" -c "import socket,sys; s=socket.socket(); s.settimeout(1); s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()" "$PORT" >/dev/null 2>&1
+  fi
 }
 
 mkdir -p "$(dirname "$LEASE")"
