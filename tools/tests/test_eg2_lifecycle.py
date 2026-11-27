@@ -112,7 +112,7 @@ exit 1
 
     def test_acquire_cold_and_hot(self):
         self.lease.unlink(missing_ok=True)
-        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10', SECONDS='1000')
+        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10', SECONDS='1000', SSOT_PYTHON=sys.executable)
         acquire = subprocess.Popen(['/bin/bash', str(ACQUIRE)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, text=True, env=e)
         try:
@@ -124,6 +124,12 @@ exit 1
             else:
                 self.fail('acquire did not touch lease')
             self.start_server()
+            probe = subprocess.run(
+                [sys.executable, '-c',
+                 "import socket,sys; s=socket.socket(); s.settimeout(1); "
+                 "s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()",
+                 str(self.port)], env=e, capture_output=True, text=True, timeout=5)
+            self.assertEqual(probe.returncode, 0, probe.stderr)
             _out, err = acquire.communicate(timeout=20)
             self.assertEqual(acquire.returncode, 0, err)
         finally:

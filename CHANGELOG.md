@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.10] - 2026-11-28 — CI acquire 解释器隔离
+
+- **fix(test)**: cold acquire 用例显式钉 `SSOT_PYTHON=sys.executable`，并在同一环境先跑 socket probe；区分 CI 探针失败与 acquire 脚本失败
+
 ## [0.31.9] - 2026-11-27 — acquire 固定计数超时
+
+> 注意：v0.31.9 tag CI 仍因 cold acquire 失败，请使用 v0.31.10；tag 未移动。
 
 - **fix(lifecycle)**: semantic/eg2 acquire 改用固定 0.25s/0.5s 计数循环，不再依赖可能继承自环境的 `SECONDS`；补 `SECONDS=1000` 回归
 
