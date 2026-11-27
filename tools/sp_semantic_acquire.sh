@@ -23,15 +23,7 @@ PY
 }
 
 socket_ready() {
-  "$PYTHON" - "$SOCKET_PATH" <<'PY' >/dev/null 2>&1
-import socket, sys
-s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-s.settimeout(0.5)
-try:
-    s.connect(sys.argv[1])
-finally:
-    s.close()
-PY
+  "$PYTHON" -c "import socket,sys; s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); s.settimeout(.5); s.connect(sys.argv[1]); s.close()" "$SOCKET_PATH" >/dev/null 2>&1
 }
 
 mkdir -p "$(dirname "$LEASE")" "$(dirname "$SOCKET_PATH")"

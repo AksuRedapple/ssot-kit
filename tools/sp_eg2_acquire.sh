@@ -23,15 +23,7 @@ PY
 }
 
 health() {
-  "$PYTHON" - "$PORT" <<'PY' >/dev/null 2>&1
-import socket, sys
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(1)
-try:
-    s.connect(('127.0.0.1', int(sys.argv[1])))
-finally:
-    s.close()
-PY
+  "$PYTHON" -c "import socket,sys; s=socket.socket(); s.settimeout(1); s.connect(('127.0.0.1',int(sys.argv[1]))); s.close()" "$PORT" >/dev/null 2>&1
 }
 
 mkdir -p "$(dirname "$LEASE")"
