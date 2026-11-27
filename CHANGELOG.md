@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.4] - 2026-11-27 — CI acquire 超时夹具修复
+
+- **fix(test)**: eg2 cold acquire 用例的超时从 3s 放宽到 10s、子进程总超时 20s，避免 CI 慢启动时假服务尚未就绪；产品默认 60s 不变
+
 ## [0.31.3] - 2026-11-27 — CI 测试夹具修复
+
+> 注意：v0.31.3 tag/main CI 仍因 cold acquire 夹具 3s 超时失败，请使用 v0.31.4；tag 未移动。
 
 - **fix(test)**: eg2 生命周期假服务改用 `python -S` 跳过 site 启动，就绪窗口 2s→5s，子进程早退时带出 stderr；修复 GitHub macOS Python 3.12 runner 上的启动竞态
 

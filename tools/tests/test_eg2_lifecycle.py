@@ -111,8 +111,8 @@ exit 1
             self.start_server()
         import threading
         threading.Thread(target=later, daemon=True).start()
-        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='3')
-        p = subprocess.run(['/bin/bash', str(ACQUIRE)], capture_output=True, text=True, env=e, timeout=10)
+        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10')
+        p = subprocess.run(['/bin/bash', str(ACQUIRE)], capture_output=True, text=True, env=e, timeout=20)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertTrue(self.lease.exists())
         text = self.lifecycle.read_text()
