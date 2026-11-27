@@ -53,12 +53,14 @@ class Eg2LifecycleTest(unittest.TestCase):
         s = socket.socket(); s.bind(('127.0.0.1', 0)); port = s.getsockname()[1]; s.close()
         return port
 
-    def start_server(self, ignore_term=False):
-        # CI 的 Python 3.12 + site 启动在负载下可能超过 2s；-S 跳过 site，窗口放宽到 5s。
+    def spawn_server(self, ignore_term=False):
         p = subprocess.Popen([sys.executable, '-S', '-c', SERVER_CODE, str(self.port), str(self.pidfile),
                               '1' if ignore_term else '0'],
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         self.servers.append(p)
+        return p
+
+    def wait_server(self, p):
         for _ in range(250):
             if p.poll() is not None:
                 self.fail(f'fake health server exited rc={p.returncode}: {p.stderr.read()}')
@@ -69,6 +71,9 @@ class Eg2LifecycleTest(unittest.TestCase):
             except OSError:
                 time.sleep(.02)
         self.fail('fake health server not ready after 5s')
+
+    def start_server(self, ignore_term=False):
+        return self.wait_server(self.spawn_server(ignore_term))
 
     def env(self, **extra):
         e = os.environ.copy()
@@ -106,14 +111,21 @@ exit 1
         os.utime(self.lease, (old, old))
 
     def test_acquire_cold_and_hot(self):
-        def later():
-            time.sleep(.4)
-            self.start_server()
         import threading
+        spawned = threading.Event()
+        holder = {}
+
+        def later():
+            time.sleep(.2)
+            holder['proc'] = self.spawn_server()
+            spawned.set()
+
         threading.Thread(target=later, daemon=True).start()
+        self.assertTrue(spawned.wait(2), 'fake server spawn thread did not run')
         e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10')
         p = subprocess.run(['/bin/bash', str(ACQUIRE)], capture_output=True, text=True, env=e, timeout=20)
         self.assertEqual(p.returncode, 0, p.stderr)
+        self.wait_server(holder['proc'])
         self.assertTrue(self.lease.exists())
         text = self.lifecycle.read_text()
         self.assertIn('acquire', text)

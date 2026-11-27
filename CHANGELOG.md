@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.5] - 2026-11-27 — CI 夹具 spawn/ready 解耦
+
+- **fix(test)**: eg2 cold acquire 用例不再在守护线程里阻塞等 ready；线程只 spawn 并立即发事件，主线程等 spawn 后再跑 acquire，最后独立断言 ready，消除被吞线程异常与隐藏时序
+
 ## [0.31.4] - 2026-11-27 — CI acquire 超时夹具修复
+
+> 注意：v0.31.4 tag/main CI 仍因 cold acquire 夹具失败，请使用 v0.31.5；tag 未移动。
 
 - **fix(test)**: eg2 cold acquire 用例的超时从 3s 放宽到 10s、子进程总超时 20s，避免 CI 慢启动时假服务尚未就绪；产品默认 60s 不变
 
