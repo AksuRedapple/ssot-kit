@@ -6,9 +6,9 @@
 `sp_s0scrub --apply` 因此改写了 S0 原文语义（实测 S0 565 处疑似误报）。
 
 三条判据：
-  · high  ：有明确凭据前缀 + 词边界（不会被普通英文单词误伤），默认必清
-  · medium：短 `sk-` 前缀 / Bearer，只有在 `api_key|token|secret|authorization…`
-            80 字符上下文里才升级为 medium；默认清理
+  · high  ：有明确凭据前缀 + 左边界，进入默认处置档；不等于已验证为真
+  · medium：短 `sk-` 前缀 / Bearer，只有在候选前 80 字符的认证上下文里才升级；
+            `scrub(level='medium')` 清理，`sp_s0scrub` 默认仍只清 high
   · low   ：无上下文的短 `sk-<hex>`，只报告、不自动替换
 """
 import hashlib
@@ -22,11 +22,16 @@ HIGH = [
     ('github_pat', re.compile(r'(?<![A-Za-z0-9_])github_pat_[A-Za-z0-9_]{30,}')),
     ('akia', re.compile(r'(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}')),
     ('hf', re.compile(r'(?<![A-Za-z0-9_])hf_[A-Za-z0-9]{30,}')),
-    ('pem', re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----')),
+    ('pem', re.compile(
+        r'-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----', re.S)),
 ]
 BEARER = re.compile(r'(?i)\bbearer\s+[A-Za-z0-9._-]{30,}')
 SK_SHORT = re.compile(r'(?<![A-Za-z0-9_-])sk-[0-9a-f]{5,31}(?![0-9a-f])')
-CONTEXT = re.compile(r'(?i)(api[_-]?key|access[_-]?key|token|secret|authorization|bearer|password|passwd)')
+CONTEXT = re.compile(
+    r'(?i)(?<![A-Za-z0-9])(?:[A-Za-z0-9]+[_-])*'
+    r'(?:api[_-]?key|access[_-]?key|token|secret|authorization|bearer|password|passwd)'
+    r'(?![A-Za-z0-9])'
+)
 
 # 便宜的前置过滤：只有命中这些字面量才值得跑完整 classify（5.8GB evidence 实测）
 CANDIDATE = re.compile(
@@ -44,10 +49,10 @@ def hash8(value):
     return hashlib.sha256(value.encode()).hexdigest()[:8]
 
 
-def _token(text, pos, maxlen=80, chars=None):
+def _token(text, pos, maxlen=None, chars=None):
     j = pos
     n = len(text)
-    while j < n and j - pos < maxlen and (
+    while j < n and (maxlen is None or j - pos < maxlen) and (
             (text[j].isalnum() or text[j] in '_-') if chars is None else text[j] in chars):
         j += 1
     return text[pos:j], j
@@ -73,7 +78,7 @@ def classify(text):
         pos = i + 3
         if i > 0 and (text[i - 1].isalnum() or text[i - 1] in '_-'):
             continue
-        tok, end = _token(text, i, 80)
+        tok, end = _token(text, i)
         suf = tok[3:]
         if len(suf) >= 20:
             add('sk_full', i, end, 'high')
@@ -92,7 +97,7 @@ def classify(text):
             pos = i + len(prefix)
             if i > 0 and (text[i - 1].isalnum() or text[i - 1] == '_'):
                 continue
-            tok, end = _token(text, i, 120)
+            tok, end = _token(text, i)
             if len(tok) - len(prefix) >= minlen:
                 add(name, i, end, 'high')
     pos = 0
@@ -112,10 +117,19 @@ def classify(text):
         i = text.find('-----BEGIN ', pos)
         if i < 0:
             break
-        pos = i + 10
         j = text.find('PRIVATE KEY-----', i, i + 90)
-        if j >= 0:
-            add('pem', i, j + len('PRIVATE KEY-----'), 'high')
+        if j < 0:
+            pos = i + 10
+            continue
+        header_end = j + len('PRIVATE KEY-----')
+        end = header_end
+        end_begin = text.find('-----END ', header_end)
+        if end_begin >= 0:
+            end_key = text.find('PRIVATE KEY-----', end_begin, end_begin + 100)
+            if end_key >= 0:
+                end = end_key + len('PRIVATE KEY-----')
+        add('pem', i, end, 'high')
+        pos = end
 
     low = text.lower()
     pos = 0
@@ -129,7 +143,7 @@ def classify(text):
         j = i + 6
         while j < len(text) and text[j] in ' \t':
             j += 1
-        tok, end = _token(text, j, 120, chars=set(
+        tok, end = _token(text, j, chars=set(
             'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-'))
         if len(tok) >= 30:
             # `Bearer <token>` 本身就是认证上下文；有 Authorization 时仍算 medium

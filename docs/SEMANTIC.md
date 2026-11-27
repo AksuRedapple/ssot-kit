@@ -297,6 +297,32 @@ bash scripts/install-service.sh           # macOS=launchd / Linux=systemd --user
 服务名 `com.ssot.embed`；日志 `/tmp/ssot-embed.log`。安装前确保 `llama-server` 在 PATH
 （或传 `--llama /path/to/llama-server`）。
 
+### 语义 daemon（按需，不再常驻）
+
+macOS 可单独安装：
+
+```bash
+bash tools/install/install-semantic.sh --dry
+bash tools/install/install-semantic.sh
+```
+
+- `sp_semantic.py` 首次查询自动 touch 租约，launchd `PathState` 拉起 daemon。
+- daemon 每个连接/请求更新 active 与 last_query；reaper 每 120s 检查，空闲 30 分钟才回收。
+- 活跃连接、后台 reload、回收竞态都会阻止 kill；stale socket 由 daemon 启动时重建。
+- daemon 不可用时保留旧 oneshot 路径；Linux 不安装该服务，acquire 直接降级。
+- DB 与向量包按 active 版本指纹一起换代；增量 pack 更新也触发 reload，查询不会混用新旧代际。
+- 观测：`ssot_check.py` 的 `[semantic-idle]`；每日采样可用 `python3 tools/sp_semantic_observe.py`。手工停服加 `SSOT_SEMANTIC_REAP_MANUAL=1`（或登记 `manual-reaps.json`），summary 会从「回收 idle」统计中排除。
+
+### 嵌入服务 eg2（按需，不再常驻）
+
+`:8399` 的 llama-server 也可以懒启动：
+
+- `ssotlib.index.embed.embed_batch()` 在默认本地 API 前调用 `sp_eg2_acquire.sh`；60 秒内复用，连接失败后强制 acquire 并重试一次。
+- launchd 用 `KeepAlive.PathState` 盯 `/tmp/ssot-eg2.want`，`sp_eg2_reaper.sh` 每 120 秒检查；有 ESTABLISHED 连接或 lease 未满 30 分钟就保留。
+- **租约语义**：服务未就绪时只清理 ≥120 秒的残留租约（避免删掉 acquire 刚 touch、launchd 尚未拉起的租约）；服务仍在跑但租约已消失时必须显式回收（`PathState` 不会因文件消失而停服务）。
+- `user-prompt-retrieval` / opencode / pi 的唤醒逻辑必须调用 acquire，**不要直接 spawn llama-server**，否则会绕过 launchd 生命周期。
+- 冷启动实测约 2 秒，首条 embedding 32ms；空闲后进程与 8399 监听归零。
+
 ## 七、已知坑
 
 - fp16 → 静默 NaN（见上）

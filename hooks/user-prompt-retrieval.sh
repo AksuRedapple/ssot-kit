@@ -39,28 +39,12 @@ except Exception:
 Q=$(printf '%s' "$PROMPT" | tr '\n' ' ' | head -c 200)
 HEALTH="http://127.0.0.1:8399/health"
 
-# 8399 不在时按需拉起（SSOT_EMBED_AUTOSTART=0 可关；steward 只探测、不拉起，二者不抢）
+# 8399 不在时由统一 acquire 拉起（SSOT_EMBED_AUTOSTART=0 可关；steward 只探测、不拉起）
 ensure_embed() {
   curl -s -m 2 "$HEALTH" >/dev/null 2>&1 && return 0
   [ "${SSOT_EMBED_AUTOSTART:-1}" = "0" ] && return 1
-  local model="${EMBED_MODEL:-$ROOT/models/embeddinggemma-2-BF16.gguf}"
-  [ -f "$model" ] || return 1
-  [ -f "$ROOT/tools/serve_embed.sh" ] || return 1
-  local lock="$ROOT/.embed-start.lock"
-  if mkdir "$lock" 2>>"$ROOT/alerts/hook.err"; then
-    (cd "$ROOT" && nohup bash tools/serve_embed.sh >/tmp/ssot-embed.log 2>&1 &) || true
-    for _ in 1 2 3 4 5; do
-      sleep 1
-      curl -s -m 1 "$HEALTH" >/dev/null 2>&1 && { rmdir "$lock" 2>>"$ROOT/alerts/hook.err" || true; return 0; }
-    done
-    rmdir "$lock" 2>>"$ROOT/alerts/hook.err" || true
-    return 1
-  fi
-  for _ in 1 2 3 4 5; do
-    sleep 1
-    curl -s -m 1 "$HEALTH" >/dev/null 2>&1 && return 0
-  done
-  return 1
+  [ -f "$ROOT/tools/sp_eg2_acquire.sh" ] || return 1
+  bash "$ROOT/tools/sp_eg2_acquire.sh" >/dev/null 2>>"$ROOT/alerts/hook.err"
 }
 
 OUT=""

@@ -22,9 +22,9 @@
 | 工具 | 用途 | 最小用法 |
 |---|---|---|
 | `sp_index.py` | 建/更新语义索引（源级增量 + 向量包增量/压实；`--plan` 预览 class 策略；失败不覆盖旧库） | `python3 tools/sp_index.py --incremental` |
-| `sp_semantic.py` | 按意思搜（多模式 + 查询路由） | `python3 tools/sp_semantic.py "<问题>" --mode route3 --top 5` |
+| `sp_semantic.py` | 按意思搜（多模式 + 查询路由）；首次查询自动唤醒 daemon，空闲 30 分钟回收；嵌入服务 `:8399` 同样按需拉起 | `python3 tools/sp_semantic.py "<问题>" --mode route3 --top 5` |
 | `sp_compile.py` | 正本 → agent 记忆薄壳（可选 `--target` 换落点） | `python3 tools/sp_compile.py --mem --deploy` |
-| `ssot_check.py` | 体检：台账/收件箱/索引/覆盖/接手面/线页漂移/conf 归一化 | `python3 tools/ssot_check.py` |
+| `ssot_check.py` | 体检：台账/收件箱/索引/覆盖/接手面/线页漂移/conf 归一化；含 `[semantic-idle]` 生命周期观测 | `python3 tools/ssot_check.py` |
 
 ## 自动化
 

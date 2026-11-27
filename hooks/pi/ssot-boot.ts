@@ -23,7 +23,7 @@ const ROOT = process.env.SSOT_ROOT ?? join(HOME, "ssot");
 const BOOT_SCRIPT = join(ROOT, "tools/hooks/session-start.sh");
 const SEMANTIC = join(ROOT, "tools/sp_semantic.py");
 const RECALL_FILE = join(ROOT, "tools/recall-phrases.json");
-const EMBED_HEALTH = "http://127.0.0.1:8399/health";
+const ACQUIRE = join(ROOT, "tools/sp_eg2_acquire.sh");
 const DBG_DIR = join(HOME, ".cache/ssot-pi-boot");
 const DBG_FILE = join(DBG_DIR, "debug.log");
 
@@ -68,13 +68,14 @@ function run(cmd: string, args: string[], cwd: string, timeout: number): Promise
 	});
 }
 
-async function embedUp(): Promise<boolean> {
-	try {
-		const r = await fetch(EMBED_HEALTH, { signal: AbortSignal.timeout(1500) });
-		return r.ok;
-	} catch {
-		return false;
-	}
+function acquireEmbed(): Promise<boolean> {
+	return new Promise((resolve) => {
+		try {
+			execFile("/bin/bash", [ACQUIRE], { cwd: ROOT, timeout: 65000 }, (err) => resolve(!err));
+		} catch {
+			resolve(false);
+		}
+	});
 }
 
 export default function ssotBootExtension(pi: ExtensionAPI) {
@@ -117,8 +118,8 @@ export default function ssotBootExtension(pi: ExtensionAPI) {
 		if (!q || q === lastQuery) return;
 		if (!existsSync(SEMANTIC)) return;
 		try {
-			if (!(await embedUp())) {
-				dbg(`recall: :8399 未起，跳过 q=${q.slice(0, 40)}`);
+			if (!(await acquireEmbed())) {
+				dbg(`recall: :8399 acquire 失败，跳过 q=${q.slice(0, 40)}`);
 				return;
 			}
 			const out = await run("python3", [SEMANTIC, q, "--expand", "--top", "3"], ROOT, 40000);

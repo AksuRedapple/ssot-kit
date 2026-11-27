@@ -86,13 +86,35 @@ def write_root_manifest(ver, sem=None):
     store.write_json_atomic(os.path.join(sem, 'BUILD.json'), data, indent=2, mode=0o644)
 
 
+def update_root_pack_links(ver, sem=None):
+    """根 pack 链接只作兼容入口；必须与 active 版本一起切换。"""
+    sem = _sem(sem)
+    for name in (PACK_VECS_NAME, PACK_IDS_NAME):
+        link = os.path.join(sem, name)
+        tmp = f'{link}.{os.getpid()}.tmp'
+        target = os.path.join('versions', ver, name)
+        try:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+            os.symlink(target, tmp)
+            os.replace(tmp, link)
+        except OSError:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+
 def set_active(ver, sem=None):
-    """原子切换 active 指针，并维护各版本 STATUS。"""
+    """原子切换 active 指针，并维护各版本 STATUS 与根 pack 兼容链接。"""
     sem = _sem(sem)
     store.write_json_atomic(
         os.path.join(sem, 'active.json'),
         {'version': ver, 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')},
         indent=None, mode=0o644)
+    update_root_pack_links(ver, sem)
     try:
         open(os.path.join(sem, 'versions', ver, 'STATUS'), 'w', encoding='utf-8').write('active\n')
     except Exception:

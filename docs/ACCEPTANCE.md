@@ -269,3 +269,21 @@ bash tools/tests/run_all.sh     # 随包冒烟（隔离 HOME）
 | 步骤 | `cli.probe_warn` ← `llama_version` / `health` / `git_commit` |
 | 判据 | ① 命令不存在、端口拒绝 → 静默 ② 超时、权限 → stderr 警告一次 ③ 返回值与迁移前一致（`unknown` / `False` / `-`） |
 | 反例 | 端口没起就刷警告 → FAIL；超时被当「没在跑」→ FAIL；探测失败导致崩溃 → FAIL |
+
+## 30 semantic 按需生命周期（Unreleased）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 语义 daemon 不再开机常驻；首次查询自动唤醒，空闲 30 分钟回收，活跃请求不误杀，旧一次性路径保留 |
+| 步骤 | `bash tools/install/install-semantic.sh --dry` → 安装 → `sp_semantic.py "<问题>"` → `ssot_check.py` |
+| 判据 | ① 无租约时 job `not running` ② 查询 20s 内唤醒 ③ active 连接存在时 reaper 不回收 ④ 空闲后租约/socket 清理 ⑤ `[semantic-idle]` 可见 ⑥ daemon 与 oneshot 同索引结果全等 |
+| 反例 | 删租约后仍常驻；stale socket 让每次查询等 5s；reaper 杀掉活跃请求；Linux acquire 等待 20s 才降级 → FAIL |
+
+## 31 eg2 嵌入服务懒启动（Unreleased）
+
+| 项 | 内容 |
+|---|---|
+| 意图 | 嵌入服务 `:8399` 不再开机常驻；查询/索引自动唤醒，空闲 30 分钟停止，客户端断线能重试 |
+| 步骤 | `sp_eg2_acquire.sh` → embedding 请求 → active 连接下强制 reaper → 释放后强制 idle → `sp_semantic.py` |
+| 判据 | ① 空闲 job not running、8399 不监听、lease 无 ② 冷启动 ≤60s 且 768 维/norm≈1 ③ 8 路并发仅 1 个 llama-server ④ active 连接不回收 ⑤ stale lease 可恢复 ⑥ `sp_semantic` 从双停态可自动拉起 ⑦ acquire 刚 touch、job 未起时 reaper 不清租约 ⑧ 服务在跑但租约消失时显式回收 |
+| 反例 | hooks/opencode 直接 spawn llama-server 绕过 launchd；reaper 在活跃请求中杀进程；请求失败不重试；清掉冷启动刚 touch 的租约导致 acquire 超时 → FAIL |

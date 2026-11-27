@@ -33,6 +33,7 @@ if _HERE not in sys.path:
 from ssotlib import asserts  # noqa: E402
 from ssotlib.entries import (CONF_PREFIXES, ENTRY_RE, head_marker_count, inbox_stats,  # noqa: E402
                              is_entry, marker_count, normalize_conf, parse_conf, pending_count)
+from ssotlib.semantic_obs import idle_stats as _semantic_idle_stats  # noqa: E402
 from ssotlib import cli  # noqa: E402
 
 # 与 sp_compile.HARD_LIMIT(25000) 对齐，告警线留 1000B 余量
@@ -168,6 +169,11 @@ def semantic_stats(root):
             if day in ln[:30] and 'daemon_fallback' in ln:
                 fb += 1
     return p50, p90, len(lat), fb
+
+
+def semantic_idle_stats(root):
+    """按需 semantic 生命周期观测（共享实现在 ssotlib.semantic_obs）。"""
+    return _semantic_idle_stats(root)
 
 
 def dispatch_stats(root):
@@ -515,6 +521,17 @@ def main():
         print(f"[semantic] p50 {p50}ms · p90 {p90}ms · 样本 {n} · 今日 fallback {fb}")
     else:
         print("[semantic] 无常驻 daemon 样本（走一次性路径）")
+    idle = semantic_idle_stats(root)
+    c24, c7 = idle['24h'], idle['7d']
+    idle_s = '未知' if idle['idle_min'] is None else f"{idle['idle_min']}m"
+    wake_s = 'n/a' if c24['wake_success_pct'] is None else f"{c24['wake_success_pct']}%"
+    cold_s = 'n/a' if c24['cold_p95_s'] is None else f"{c24['cold_p95_s']}s"
+    print(f"[semantic-idle] 24h cold={c24['cold_acquire']} wake={wake_s} "
+          f"cold_p95={cold_s} ready={c24['ready']} reaped={c24['reaped']} "
+          f"manual={c24.get('manual_reaped', 0)} "
+          f"skip_active={c24['skip_active']} skip_race={c24['skip_race']} "
+          f"failed={c24['term_failed'] + c24['state_invalid']} · 7d cold={c7['cold_acquire']} "
+          f"reaped={c7['reaped']} · state={idle['state']} idle={idle_s} · last={idle['last'] or 'none'}")
 
     # 2d. 消费端（Phase B，2026-10-31）
     d7, dmin = dispatch_stats(root)

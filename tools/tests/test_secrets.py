@@ -29,9 +29,40 @@ class ClassifyTest(unittest.TestCase):
         pem = '-----BEGIN ' + 'RSA ' + 'PRIVATE KEY-----'
         self.assertEqual(self.kinds(pem), [('pem', 'high')])
 
+    def test_long_tokens_are_fully_spanned(self):
+        for n in (81, 100, 4096):
+            key = 'sk-' + 'a' * n
+            ms = S.classify(key)
+            self.assertEqual(len(ms), 1)
+            self.assertEqual(ms[0]['kind'], 'sk_full')
+            self.assertEqual(ms[0]['end'], len(key))
+            self.assertEqual(S.scrub(key, level='high'), S.REPLACEMENT)
+
+        gh = 'ghp_' + 'b' * 200
+        self.assertEqual(S.classify(gh)[0]['end'], len(gh))
+        self.assertEqual(S.scrub(gh, level='high'), S.REPLACEMENT)
+        bearer = 'Bearer ' + 'c' * 200
+        self.assertEqual(S.classify(bearer)[0]['end'], len(bearer))
+        self.assertEqual(S.scrub(bearer, level='medium'), S.REPLACEMENT)
+
+    def test_complete_pem_block_is_spanned_and_scrubbed(self):
+        pem = ('-----BEGIN ' + 'RSA ' + 'PRIVATE KEY-----\n' + 'YWJj' * 20 +
+               '\n-----END ' + 'RSA ' + 'PRIVATE KEY-----')
+        ms = S.classify(pem)
+        self.assertEqual(len(ms), 1)
+        self.assertEqual(ms[0]['kind'], 'pem')
+        self.assertEqual(ms[0]['value'], pem)
+        self.assertEqual(S.scrub(pem, level='high'), S.REPLACEMENT)
+
     def test_short_sk_confidence(self):
         self.assertEqual(self.kinds('api_key: sk-deadbeef'), [('sk_short', 'medium')])
+        self.assertEqual(self.kinds('access_token: sk-deadbeef'), [('sk_short', 'medium')])
         self.assertEqual(self.kinds('随便写的 sk-deadbeef'), [('sk_short', 'low')])
+
+    def test_context_requires_a_word_boundary(self):
+        self.assertEqual(self.kinds('tokenizer: sk-deadbeef'), [('sk_short', 'low')])
+        self.assertEqual(self.kinds('secretive: sk-deadbeef'), [('sk_short', 'low')])
+        self.assertEqual(self.kinds('token: sk-deadbeef'), [('sk_short', 'medium')])
 
     def test_bearer_is_medium(self):
         self.assertEqual(self.kinds('Authorization: Bearer ' + 'f' * 40),
@@ -83,6 +114,9 @@ class BackwardCompatTest(unittest.TestCase):
         self.assertTrue(all(hasattr(rx, 'findall') for rx, _ in S.SECRET_RX))
         # 旧正则会把 task- 词尾当 key；新 SECRET_RX 不应如此
         self.assertEqual(sum(len(rx.findall('task-deadbeef')) for rx, _ in S.SECRET_RX), 0)
+        pem = ('-----BEGIN ' + 'RSA ' + 'PRIVATE KEY-----\nYWJj\n'
+               '-----END ' + 'RSA ' + 'PRIVATE KEY-----')
+        self.assertEqual(sum(len(rx.findall(pem)) for rx, _ in S.SECRET_RX), 1)
 
 
 if __name__ == '__main__':

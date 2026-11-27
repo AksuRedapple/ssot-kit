@@ -133,16 +133,27 @@ def expand_queries(query, groups, cap=3):
 PACK_VECS, PACK_IDS = _pack.pack_paths(DB)
 
 
-def pack_fresh(db=DB):
-    return _pack.pack_fresh(db, PACK_VECS, PACK_IDS)
+def pack_paths_for(db, pack_vecs=None, pack_ids=None):
+    default_vecs, default_ids = _pack.pack_paths(db)
+    return pack_vecs or default_vecs, pack_ids or default_ids
 
 
-def build_pack(db=DB, quiet=False, pack_vecs=PACK_VECS, pack_ids=PACK_IDS):
+def pack_fresh(db=None, pack_vecs=None, pack_ids=None):
+    db = db or DB
+    pack_vecs, pack_ids = pack_paths_for(db, pack_vecs, pack_ids)
+    return _pack.pack_fresh(db, pack_vecs, pack_ids)
+
+
+def build_pack(db=None, quiet=False, pack_vecs=None, pack_ids=None):
+    db = db or DB
+    pack_vecs, pack_ids = pack_paths_for(db, pack_vecs, pack_ids)
     return _pack.build_pack(db, pack_vecs, pack_ids, quiet=quiet)
 
 
-def build_pack_incremental(db=DB, quiet=False, pack_vecs=PACK_VECS, pack_ids=PACK_IDS,
+def build_pack_incremental(db=None, quiet=False, pack_vecs=None, pack_ids=None,
                            max_stale=2000, max_missing=5000):
+    db = db or DB
+    pack_vecs, pack_ids = pack_paths_for(db, pack_vecs, pack_ids)
     return _pack.build_pack_incremental(db, pack_vecs, pack_ids, quiet=quiet,
                                         max_stale=max_stale, max_missing=max_missing)
 
@@ -158,8 +169,9 @@ def load_pack():
     return _pack.load_pack(PACK_VECS, PACK_IDS)
 
 
-def fetch_rows(ids_list, db=DB):
-    """按 DB 行号取详情（只取命中的几行）。"""
+def fetch_rows(ids_list, db=None):
+    """按 DB 行号取详情（只取命中的几行）；默认跟随当前代际。"""
+    db = db or DB
     out = {}
     if not ids_list:
         return out
@@ -720,7 +732,24 @@ def run_calibrate(path, out=None):
 
 
 
-SOCK_PATH = os.path.expanduser('~/.ssot/semantic.sock')
+SOCK_PATH = os.environ.get('SSOT_SEMANTIC_SOCKET', os.path.expanduser('~/.ssot/semantic.sock'))
+
+
+def ensure_semantic_daemon(timeout=None):
+    if os.environ.get('SSOT_SEMANTIC_ACQUIRE') == '0':
+        return False
+    import subprocess
+    timeout = max(1, int(float(timeout or os.environ.get('SSOT_SEMANTIC_ACQUIRE_TIMEOUT', '20'))))
+    env = os.environ.copy()
+    env['SSOT_SEMANTIC_ACQUIRE_TIMEOUT'] = str(timeout)
+    try:
+        proc = subprocess.run(['/bin/bash', os.path.join(_HERE, 'sp_semantic_acquire.sh')],
+                              capture_output=True, text=True, timeout=timeout + 5, env=env)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError('acquire_timeout')
+    if proc.returncode != 0:
+        raise RuntimeError((proc.stderr or 'acquire_failed').strip()[:120])
+    return True
 
 
 def daemon_search(query, top=8, path=None, role=None, expand=False, mode='dense', timeout=5.0):
@@ -794,10 +823,14 @@ def main():
         os.environ['SSOT_NO_LOG'] = '1'
     t0 = time.time()
     results = meta = None
-    if (not a.oneshot) and os.environ.get('SSOT_SEMANTIC_ONESHOT') != '1' and os.path.exists(SOCK_PATH):
+    daemon_enabled = not a.oneshot and os.environ.get('SSOT_SEMANTIC_ONESHOT') != '1'
+    if daemon_enabled:
         try:
-            results, meta = daemon_search(a.query, top=a.top, path=a.path, role=a.role,
-                                          expand=a.expand, mode=a.mode)
+            acquired = ensure_semantic_daemon()
+            if acquired or os.path.exists(SOCK_PATH):
+                query_timeout = float(os.environ.get('SSOT_SEMANTIC_QUERY_TIMEOUT', '15'))
+                results, meta = daemon_search(a.query, top=a.top, path=a.path, role=a.role,
+                                              expand=a.expand, mode=a.mode, timeout=query_timeout)
         except Exception as _e:  # noqa: BLE001 —— 降级是硬要求(A5)
             log_call('sp_semantic', a.query, 0, None, (time.time() - t0) * 1000,
                      status='daemon_fallback', extra={'error': str(_e)[:120]})

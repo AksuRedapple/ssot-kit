@@ -27,9 +27,9 @@ echo "== coldstart-check · $ROOT =="
 # 1) 解释器
 PY="${SSOT_PY:-python3}"
 if ! command -v "$PY" >/dev/null 2>&1; then
-  bad "解释器不存在：$PY（设 SSOT_PY 指向带 numpy 的 python）"
+  bad "解释器不存在：${PY}（设 SSOT_PY 指向带 numpy 的 python）"
 elif "$PY" -c 'import sys, numpy; print(sys.version.split()[0], numpy.__version__)' >/tmp/.ssot-py 2>/dev/null; then
-  ok "解释器 $PY：$(cat /tmp/.ssot-py)（numpy 可用）"
+  ok "解释器 ${PY}：$(cat /tmp/.ssot-py)（numpy 可用）"
 else
   bad "解释器 $PY 缺 numpy；语义检索会失败。export SSOT_PY=/path/to/python"
 fi
@@ -41,7 +41,7 @@ for f in "$ROOT/profile/harness-boot.md" "$ROOT/START.md"; do
   while IFS= read -r rel; do
     [ -n "$rel" ] || continue
     case "$rel" in
-      tools/legacy/*) bad "$(basename "$f") 引用 legacy 工具：$rel（改用 sp_semantic/sp_index）" ;;
+      tools/legacy/*) bad "$(basename "$f") 引用 legacy 工具：${rel}（改用 sp_semantic/sp_index）" ;;
       *) if [ ! -e "$ROOT/$rel" ]; then bad "$(basename "$f") 引用不存在的工具：$rel"; fi ;;
     esac
   # 只查实例内 tools/ 的引用；study-infra/scripts/... 属于其他仓库，不在此判
@@ -87,7 +87,7 @@ if [ -d "$ROOT/lines" ]; then
   fi
 fi
 
-echo "== 结果：$([ "$fail" -eq 0 ] && echo 通过 || echo 失败)（阻断 $fail / 警告 $warn） =="
+echo "== 结果：$([ "$fail" -eq 0 ] && echo 通过 || echo 失败)（阻断 $fail / 警告 ${warn}） =="
 if [ "$STRICT" = "1" ] && [ "$warn" -gt 0 ]; then
   exit 1
 fi

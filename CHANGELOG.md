@@ -4,7 +4,14 @@ All notable changes to this project are documented here. The format follows Keep
 
 ## [Unreleased]
 
-No unreleased changes yet.
+- **feat(semantic)**: `sp_semantic` 首次查询自动唤醒 daemon，空闲 30 分钟回收；新增 `sp_semantic_daemon/acquire/reaper/observe/summary` 与 macOS `install-semantic.sh`，活跃连接不误杀，保留 oneshot 降级
+- **fix(semantic)**: acquire timeout 统一规范化为整数，避免 `20.0` 触发 Bash 整数比较错误导致首次冷查询降级；补小数环境值回归
+- **feat(eg2)**: 嵌入服务 `:8399` 支持租约懒启动 + 30 分钟空闲回收；`ssotlib.index.embed` 自动 acquire 并在断线后重试一次；hooks/opencode/pi 不再直接 spawn llama-server，新增 acquire/reaper 与生命周期测试；reaper 只清理超龄残留租约（避免冷启动竞态），服务在跑但租约消失时显式回收
+- **obs(ssot_check)**: 新增 `[semantic-idle]`，显示 24h/7d 唤醒、回收、跳过活跃、失败与当前 idle 状态；手工停服（`SSOT_SEMANTIC_REAP_MANUAL=1` 或 `manual-reaps.json`）不计入 idle 统计
+- **fix(semantic)**: daemon 按 active DB + 同版本 pack 指纹原子换代；SIGTERM 先停止接单再 drain；reaper kill 前终检租约/连接；观测改滚动 24h，fallback 分母包含全部尝试
+- **fix(secrets)**: 长 `sk-` token 不再截断残留；完整 PEM block 全替换；上下文关键词增加词边界，避免 `tokenizer` 误升 medium
+- **fix(coldstart)**: 修复 macOS bash 3.2 下 `$VAR` 紧跟全角标点的 unbound variable，新增最小实例与静态回归
+- **test**: 新增 daemon 生命周期与 idle 观测回归；kit manifest 登记新工具/安装器/测试
 
 ## [0.31.1] - 2026-11-24 — 维护流程分级（docs-only 不再跑全量）
 

@@ -62,6 +62,26 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(root['chunks'], 1)        # 版本清单字段保留
             self.assertEqual([v[1] for v in layout.list_versions(td)], ['active'])
 
+    def test_set_active_updates_root_pack_links(self):
+        with tempfile.TemporaryDirectory() as td:
+            for ver in ('v1', 'v2'):
+                d = os.path.join(td, 'versions', ver)
+                os.makedirs(d)
+                make_db(os.path.join(d, 'index.db'), [(1, [1.0, 0.0])])
+                for name in (layout.PACK_VECS_NAME, layout.PACK_IDS_NAME):
+                    with open(os.path.join(d, name), 'wb') as f:
+                        f.write(ver.encode())
+                with open(os.path.join(d, 'BUILD.json'), 'w', encoding='utf-8') as f:
+                    json.dump({'chunks': 1}, f)
+            layout.set_active('v1', td)
+            for name in (layout.PACK_VECS_NAME, layout.PACK_IDS_NAME):
+                self.assertEqual(os.readlink(os.path.join(td, name)),
+                                 os.path.join('versions', 'v1', name))
+            layout.set_active('v2', td)
+            for name in (layout.PACK_VECS_NAME, layout.PACK_IDS_NAME):
+                self.assertEqual(os.readlink(os.path.join(td, name)),
+                                 os.path.join('versions', 'v2', name))
+
     def test_prune_keeps_active(self):
         with tempfile.TemporaryDirectory() as td:
             for name in ('old', 'new'):
