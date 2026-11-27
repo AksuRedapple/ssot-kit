@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.7] - 2026-11-27 — eg2 acquire 就绪探针加固
+
+- **fix(eg2)**: acquire 的就绪检查从 `curl /health` 改为 Python TCP socket，与 semantic 一致；去掉 CI curl/代理环境差异，保留 1s 超时与 60s 默认 acquire 窗口
+
 ## [0.31.6] - 2026-11-27 — CI cold acquire 确定性握手
+
+> 注意：v0.31.6 tag/main CI 仍因 acquire 的 curl 探针失败，请使用 v0.31.7；tag 未移动。
 
 - **fix(test)**: cold acquire 用例改为先启动 acquire、等 lease 出现，再启动假服务；移除 sleep/守护线程竞态，CI 可复现
 

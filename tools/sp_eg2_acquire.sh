@@ -22,7 +22,17 @@ with open(path, 'a', encoding='utf-8') as f:
 PY
 }
 
-health() { curl -fsS -m 1 "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; }
+health() {
+  "$PYTHON" - "$PORT" <<'PY' >/dev/null 2>&1
+import socket, sys
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.settimeout(1)
+try:
+    s.connect(('127.0.0.1', int(sys.argv[1])))
+finally:
+    s.close()
+PY
+}
 
 mkdir -p "$(dirname "$LEASE")"
 touch "$LEASE"
