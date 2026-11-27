@@ -43,10 +43,12 @@ if health; then
 fi
 
 log_event acquire cold 0
-while [ "$SECONDS" -lt "$TIMEOUT" ]; do
+i=0
+while [ "$i" -lt $((TIMEOUT * 2)) ]; do
   sleep 0.5
+  i=$((i + 1))
   if health; then
-    log_event ready cold "$SECONDS"
+    log_event ready cold $((i / 2))
     exit 0
   fi
 done

@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.9] - 2026-11-27 — acquire 固定计数超时
+
+- **fix(lifecycle)**: semantic/eg2 acquire 改用固定 0.25s/0.5s 计数循环，不再依赖可能继承自环境的 `SECONDS`；补 `SECONDS=1000` 回归
+
 ## [0.31.8] - 2026-11-27 — 生命周期脚本解释器路由
+
+> 注意：v0.31.8 tag/main CI 仍因 acquire 的 `SECONDS` 循环受环境污染失败，请使用 v0.31.9；tag 未移动。
 
 - **fix(lifecycle)**: semantic/eg2 acquire 与 reaper 统一按 `SSOT_PYTHON → PATH python3 → /usr/bin/python3` 解析解释器，不再硬编码 Homebrew 路径；补 PATH 解析回归
 

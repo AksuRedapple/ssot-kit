@@ -43,10 +43,12 @@ if socket_ready; then
 fi
 
 log_event acquire cold 0
-while [ "$SECONDS" -lt "$TIMEOUT" ]; do
+i=0
+while [ "$i" -lt $((TIMEOUT * 4)) ]; do
   sleep 0.25
+  i=$((i + 1))
   if socket_ready; then
-    log_event ready cold "$SECONDS"
+    log_event ready cold $((i / 4))
     exit 0
   fi
 done

@@ -112,7 +112,7 @@ exit 1
 
     def test_acquire_cold_and_hot(self):
         self.lease.unlink(missing_ok=True)
-        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10')
+        e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10', SECONDS='1000')
         acquire = subprocess.Popen(['/bin/bash', str(ACQUIRE)], stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, text=True, env=e)
         try:
