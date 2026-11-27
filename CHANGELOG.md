@@ -6,7 +6,13 @@ All notable changes to this project are documented here. The format follows Keep
 
 No unreleased changes yet.
 
+## [0.31.6] - 2026-11-27 — CI cold acquire 确定性握手
+
+- **fix(test)**: cold acquire 用例改为先启动 acquire、等 lease 出现，再启动假服务；移除 sleep/守护线程竞态，CI 可复现
+
 ## [0.31.5] - 2026-11-27 — CI 夹具 spawn/ready 解耦
+
+> 注意：v0.31.5 tag/main CI 仍因 cold acquire 夹具失败，请使用 v0.31.6；tag 未移动。
 
 - **fix(test)**: eg2 cold acquire 用例不再在守护线程里阻塞等 ready；线程只 spawn 并立即发事件，主线程等 spawn 后再跑 acquire，最后独立断言 ready，消除被吞线程异常与隐藏时序
 

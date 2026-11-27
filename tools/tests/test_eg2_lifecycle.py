@@ -111,21 +111,25 @@ exit 1
         os.utime(self.lease, (old, old))
 
     def test_acquire_cold_and_hot(self):
-        import threading
-        spawned = threading.Event()
-        holder = {}
-
-        def later():
-            time.sleep(.2)
-            holder['proc'] = self.spawn_server()
-            spawned.set()
-
-        threading.Thread(target=later, daemon=True).start()
-        self.assertTrue(spawned.wait(2), 'fake server spawn thread did not run')
+        self.lease.unlink(missing_ok=True)
         e = self.env(SSOT_EG2_ACQUIRE_TIMEOUT='10')
-        p = subprocess.run(['/bin/bash', str(ACQUIRE)], capture_output=True, text=True, env=e, timeout=20)
-        self.assertEqual(p.returncode, 0, p.stderr)
-        self.wait_server(holder['proc'])
+        acquire = subprocess.Popen(['/bin/bash', str(ACQUIRE)], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, env=e)
+        try:
+            # 确定性 cold 握手：等 acquire 先 touch lease，再让假服务开始监听。
+            for _ in range(100):
+                if self.lease.exists():
+                    break
+                time.sleep(.02)
+            else:
+                self.fail('acquire did not touch lease')
+            self.start_server()
+            _out, err = acquire.communicate(timeout=20)
+            self.assertEqual(acquire.returncode, 0, err)
+        finally:
+            if acquire.poll() is None:
+                acquire.kill()
+                acquire.wait(2)
         self.assertTrue(self.lease.exists())
         text = self.lifecycle.read_text()
         self.assertIn('acquire', text)
